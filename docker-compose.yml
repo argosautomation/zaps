@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - gateway-network
+
+  redis:
+    image: redis:alpine
+    restart: always
+    networks:
+      - gateway-network
+    volumes:
+      - redis-data:/data
+
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - gateway
+    networks:
+      - gateway-network
+
+networks:
+  gateway-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  caddy_data:
+  caddy_config:

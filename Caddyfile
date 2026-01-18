@@ -1,0 +1,12 @@
+{
+    acme_ca https://acme.zerossl.com/v2/DV90
+    email admin@zaps.ai
+}
+
+zaps.ai {
+    reverse_proxy gateway:3000
+}
+
+www.zaps.ai {
+    redir https://zaps.ai{uri}
+}

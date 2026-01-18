@@ -1,0 +1,21 @@
+# Binaries
+gateway
+keymgr
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Keys
+id_rsa
+*.pem
