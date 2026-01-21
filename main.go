@@ -200,7 +200,8 @@ func handleChatCompletion(c *fiber.Ctx) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	client := &http.Client{Timeout: 60 * time.Second}
+	// Increase timeout to 5 minutes for long-chain reasoning
+	client := &http.Client{Timeout: 300 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[%s] DeepSeek error: %v", clientID, err)
@@ -257,15 +258,35 @@ func rehydrateSecrets(input string, secretMap map[string]string) string {
 		output = replaceAll(output, token, original)
 	}
 
-	// Fallback to Redis for any remaining tokens
-	tokenRegex := regexp.MustCompile(`<SECRET:[A-Z_]+:\d+>`)
-	output = tokenRegex.ReplaceAllStringFunc(output, func(token string) string {
+	// Fallback to Redis for any remaining tokens (Handle AI formatting deviations)
+	// Lenient Regex: <SECRET : TYPE : ID > (matches whitespace)
+	tokenRegex := regexp.MustCompile(`<SECRET:\s*([A-Z_]+)\s*:\s*(\d+)\s*>`)
+	output = tokenRegex.ReplaceAllStringFunc(output, func(match string) string {
+		// Extract core components
+		submatches := tokenRegex.FindStringSubmatch(match)
+		if len(submatches) != 3 {
+			return match
+		}
+		label := submatches[1]
+		id := submatches[2]
+
+		// Reconstruct strict token for lookup
+		strictToken := fmt.Sprintf("<SECRET:%s:%s>", label, id)
+
+		// 1. Check Memory (in case leniency matched something map didn't catch?)
+		// Usually map check (above) handles exact matches. This handles malformed ones.
+		if val, ok := secretMap[strictToken]; ok {
+			return val
+		}
+
+		// 2. Check Redis
 		if rdb != nil {
-			if val, err := rdb.Get(ctx, token).Result(); err == nil {
+			if val, err := rdb.Get(ctx, strictToken).Result(); err == nil {
 				return val
 			}
 		}
-		return token // Keep token if not found
+
+		return match // Keep token if not found
 	})
 
 	return output
