@@ -296,7 +296,14 @@ func rehydrateSecrets(input string, secretMap map[string]string) string {
 
 	// First try in-memory map
 	for token, original := range secretMap {
-		output = replaceAll(output, token, original)
+		if input != replaceAll(input, token, original) {
+			output = replaceAll(output, token, original)
+			// Log checking is handled per occurrence, but for bulk replace we just infer.
+			// Actually, let's just log if we find it.
+			if regexp.MustCompile(regexp.QuoteMeta(token)).MatchString(input) {
+				log.Printf("[Rehydration] Restored %s -> %s", token, maskSecret(original))
+			}
+		}
 	}
 
 	// Fallback to Redis for any remaining tokens (Handle AI formatting deviations)
@@ -323,6 +330,7 @@ func rehydrateSecrets(input string, secretMap map[string]string) string {
 		// 2. Check Redis
 		if rdb != nil {
 			if val, err := rdb.Get(ctx, strictToken).Result(); err == nil {
+				log.Printf("[Rehydration] Restored (Redis) %s -> %s", strictToken, maskSecret(val))
 				return val
 			}
 		}
