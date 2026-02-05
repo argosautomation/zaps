@@ -93,8 +93,8 @@ func main() {
 	// Serve static files
 	adminGroup.Static("/", "./public")
 
-	// Admin API
-	apiAdmin := app.Group("/api/admin", IPWhitelistMiddleware(rdb))
+	// Admin API (No IP Whitelist - protected by session auth)
+	apiAdmin := app.Group("/api/admin")
 
 	// Public Admin Endpoints (Login)
 	apiAdmin.Post("/login", HandleLogin(rdb))
@@ -118,7 +118,12 @@ func main() {
 	SECURED.Post("/config", HandleUpdateConfig(rdb))
 
 	SECURED.Get("/users", HandleListUsers(rdb))
+	SECURED.Get("/users", HandleListUsers(rdb))
 	SECURED.Post("/users", HandleCreateUser(rdb))
+
+	// Provider Config
+	SECURED.Get("/providers", HandleGetProviders(rdb))
+	SECURED.Post("/providers", HandleUpdateProviders(rdb))
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -128,9 +133,8 @@ func main() {
 		})
 	})
 
-	// Main proxy endpoint
-	// Apply IP Whitelist (Shared with Admin) as per user request
-	api := app.Group("/v1", IPWhitelistMiddleware(rdb))
+	// Main proxy endpoint (Protected by API Key auth only)
+	api := app.Group("/v1")
 	api.Use(AuthMiddleware(rdb))
 	api.Post("/chat/completions", handleChatCompletion)
 
@@ -140,12 +144,55 @@ func main() {
 
 func handleChatCompletion(c *fiber.Ctx) error {
 	clientID := c.Get("x-client-id", "unknown")
+	ownerID, _ := c.Locals("owner_id").(string) // Added by AuthMiddleware
 
 	// Parse request body
 	var body map[string]interface{}
 	if err := c.BodyParser(&body); err != nil {
 		log.Printf("[%s] Invalid JSON: %v", clientID, err)
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+
+	// 1. Determine Provider
+	var model string
+	if m, ok := body["model"].(string); ok {
+		model = m
+	}
+	provider := GetProviderForModel(model)
+	if provider == "" {
+		// Default to DeepSeek if unknown model, or user preference?
+		// For now, let's assume DeepSeek as the generic "default" for Zaps if unspecified
+		provider = ProviderDeepSeek
+	}
+
+	// 2. Resolve Credentials
+	// Try User's personal config first
+	apiKey, _ := GetProviderKey(rdb, ownerID, provider)
+
+	// Fallback to Global Config (Legacy/Admin) ONLY for DeepSeek
+	// (We don't want to burn Admin's OpenAI credits for random users unless intended)
+	if apiKey == "" && provider == ProviderDeepSeek {
+		apiKey, _ = rdb.HGet(ctx, "config:gateway", "deepseek_api_key").Result()
+		if apiKey == "" {
+			apiKey = os.Getenv("DEEPSEEK_API_KEY")
+		}
+	}
+
+	if apiKey == "" {
+		return c.Status(402).JSON(fiber.Map{
+			"error":   "Provider not configured",
+			"message": fmt.Sprintf("Please configure an API Key for %s in your Dashboard", provider),
+		})
+	}
+
+	// 3. Resolve Target Endpoint
+	baseURL := GetProviderURL(provider)
+	targetURL := baseURL + "/chat/completions"
+
+	// Special Case: Anthropic (If we ever support it via this endpoint, we'd need translation)
+	// For now, we only support OpenAI-compatible endpoints (OpenAI, DeepSeek, etc)
+	if provider == ProviderAnthropic {
+		return c.Status(400).JSON(fiber.Map{"error": "Anthropic requires /v1/messages endpoint. Auto-translation from /chat/completions is coming soon."})
 	}
 
 	// Track secrets for rehydration
@@ -183,29 +230,23 @@ func handleChatCompletion(c *fiber.Ctx) error {
 		body["messages"] = newMessages
 	}
 
-	// Forward to DeepSeek
+	// Forward to Upstream
 	cleanBody, _ := json.Marshal(body)
 
-	req, err := http.NewRequest("POST", DeepSeekAPI+"/chat/completions", bytes.NewReader(cleanBody))
+	req, err := http.NewRequest("POST", targetURL, bytes.NewReader(cleanBody))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to create request"})
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-
-	// Config Prioritization: Redis > Env
-	apiKey, err := rdb.HGet(ctx, "config:gateway", "deepseek_api_key").Result()
-	if err != nil || apiKey == "" {
-		apiKey = os.Getenv("DEEPSEEK_API_KEY")
-	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
 	// Increase timeout to 5 minutes for long-chain reasoning
 	client := &http.Client{Timeout: 300 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[%s] DeepSeek error: %v", clientID, err)
-		return c.Status(502).JSON(fiber.Map{"error": "DeepSeek unreachable"})
+		log.Printf("[%s] Upstream error (%s): %v", clientID, provider, err)
+		return c.Status(502).JSON(fiber.Map{"error": "Upstream provider unreachable"})
 	}
 	defer resp.Body.Close()
 

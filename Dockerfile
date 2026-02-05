@@ -11,7 +11,7 @@ COPY . .
 
 # Build the binary
 RUN go mod tidy
-RUN go build -o gateway main.go auth.go admin.go
+RUN go build -o gateway main.go auth.go admin.go providers.go
 RUN go build -o keymgr keymgr.go auth.go
 
 # Runtime Stage

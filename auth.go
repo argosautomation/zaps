@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	
+
 	"strings"
 	"time"
 
@@ -23,11 +23,12 @@ type APIKey struct {
 	UsageCount  int64     `json:"usage_count"`
 	RateLimit   int       `json:"rate_limit"` // requests per minute
 	Enabled     bool      `json:"enabled"`
+	OwnerID     string    `json:"owner_id"` // Username of the owner
 }
 
 const (
-	apiKeyPrefix = "gk_"
-	apiKeyLength = 32
+	apiKeyPrefix   = "gk_"
+	apiKeyLength   = 32
 	redisKeyPrefix = "apikey:"
 )
 
@@ -46,7 +47,7 @@ func StoreAPIKey(rdb *redis.Client, apiKey *APIKey) error {
 	if err != nil {
 		return err
 	}
-	
+
 	key := redisKeyPrefix + apiKey.Key
 	return rdb.Set(context.Background(), key, data, 0).Err()
 }
@@ -58,12 +59,12 @@ func GetAPIKey(rdb *redis.Client, key string) (*APIKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var apiKey APIKey
 	if err := json.Unmarshal([]byte(data), &apiKey); err != nil {
 		return nil, err
 	}
-	
+
 	return &apiKey, nil
 }
 
@@ -73,10 +74,10 @@ func UpdateAPIKeyUsage(rdb *redis.Client, key string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	apiKey.LastUsedAt = time.Now()
 	apiKey.UsageCount++
-	
+
 	return StoreAPIKey(rdb, apiKey)
 }
 
@@ -90,27 +91,27 @@ func DeleteAPIKey(rdb *redis.Client, key string) error {
 func ListAPIKeys(rdb *redis.Client) ([]*APIKey, error) {
 	ctx := context.Background()
 	pattern := redisKeyPrefix + "*"
-	
+
 	keys, err := rdb.Keys(ctx, pattern).Result()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var apiKeys []*APIKey
 	for _, key := range keys {
 		data, err := rdb.Get(ctx, key).Result()
 		if err != nil {
 			continue
 		}
-		
+
 		var apiKey APIKey
 		if err := json.Unmarshal([]byte(data), &apiKey); err != nil {
 			continue
 		}
-		
+
 		apiKeys = append(apiKeys, &apiKey)
 	}
-	
+
 	return apiKeys, nil
 }
 
@@ -121,54 +122,55 @@ func AuthMiddleware(rdb *redis.Client) fiber.Handler {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(401).JSON(fiber.Map{
-				"error": "Missing Authorization header",
+				"error":   "Missing Authorization header",
 				"message": "Please provide an API key: Authorization: Bearer gk_...",
 			})
 		}
-		
+
 		// Parse Bearer token
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			return c.Status(401).JSON(fiber.Map{
-				"error": "Invalid Authorization format",
+				"error":   "Invalid Authorization format",
 				"message": "Expected: Authorization: Bearer gk_...",
 			})
 		}
-		
+
 		apiKey := parts[1]
-		
+
 		// Validate API key format
 		if !strings.HasPrefix(apiKey, apiKeyPrefix) {
 			return c.Status(401).JSON(fiber.Map{
-				"error": "Invalid API key format",
+				"error":   "Invalid API key format",
 				"message": "API key must start with gk_",
 			})
 		}
-		
+
 		// Check if key exists
 		keyData, err := GetAPIKey(rdb, apiKey)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{
-				"error": "Invalid API key",
+				"error":   "Invalid API key",
 				"message": "API key not found or has been revoked",
 			})
 		}
-		
+
 		// Check if key is enabled
 		if !keyData.Enabled {
 			return c.Status(403).JSON(fiber.Map{
-				"error": "API key disabled",
+				"error":   "API key disabled",
 				"message": "This API key has been disabled",
 			})
 		}
-		
+
 		// Update usage statistics (async to not slow down request)
 		go UpdateAPIKeyUsage(rdb, apiKey)
-		
+
 		// Store key name in context for logging
 		c.Locals("api_key_name", keyData.Name)
 		c.Locals("api_key", apiKey)
-		
+		c.Locals("owner_id", keyData.OwnerID)
+
 		return c.Next()
 	}
 }

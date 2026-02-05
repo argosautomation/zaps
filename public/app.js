@@ -167,64 +167,15 @@ async function removeIP(ip) {
 
 // --- Config ---
 async function loadConfig() {
-    // Only load global config if admin? Or just ignore for now as we have Per-User config above
-}
+    // We can show this in Stats or a Config tab.
+    // For now, let's just log it or show in stats.
+    const res = await api('/config');
+    if (res) {
+        const data = await res.json();
+        // Update UI if we had a field for it
+        console.log("Current Config:", data);
 
-// --- Providers ---
-async function loadProviders() {
-    // Clear first
-    document.getElementById('prov-openai').value = '';
-    document.getElementById('prov-deepseek').value = '';
-    document.getElementById('prov-anthropic').value = '';
-
-    const res = await api('/providers');
-    if (!res) return;
-    const data = await res.json();
-
-    // Data is { openai: "sk-...", deepseek: "..." } (masked)
-    // We only set placeholder/value if exists? 
-    // Actually password fields shouldn't show masked value as value.
-    // We'll show "********" as placeholder to indicate it is set.
-
-    if (data.openai) document.getElementById('prov-openai').placeholder = "******** (Configured)";
-    if (data.deepseek) document.getElementById('prov-deepseek').placeholder = "******** (Configured)";
-    if (data.anthropic) document.getElementById('prov-anthropic').placeholder = "******** (Configured)";
-}
-
-async function saveProviders(e) {
-    e.preventDefault();
-
-    const body = {
-        openai: document.getElementById('prov-openai').value,
-        deepseek: document.getElementById('prov-deepseek').value,
-        anthropic: document.getElementById('prov-anthropic').value
-    };
-
-    // Only send fields that track changes
-    if (!body.openai) delete body.openai;
-    if (!body.deepseek) delete body.deepseek;
-    if (!body.anthropic) delete body.anthropic;
-
-    if (Object.keys(body).length === 0) {
-        customAlert('Info', 'No changes to save.');
-        return;
-    }
-
-    try {
-        const res = await api('/providers', 'POST', body);
-        if (res.ok) {
-            customAlert('Success', 'Provider configuration updated!');
-            // Reset fields
-            document.getElementById('prov-openai').value = '';
-            document.getElementById('prov-deepseek').value = '';
-            document.getElementById('prov-anthropic').value = '';
-            loadProviders(); // Refresh placeholders
-        } else {
-            customAlert('Error', 'Failed to save configuration.');
-        }
-    } catch (e) {
-        console.error(e);
-        customAlert('Error', 'Connection failed.');
+        // Maybe update stats card?
     }
 }
 
@@ -301,7 +252,5 @@ window.loadWhitelist = loadWhitelist;
 window.loadUsers = loadUsers;
 window.createUser = createUser;
 window.changePassword = changePassword;
-window.loadProviders = loadProviders;
-window.saveProviders = saveProviders;
 window.logout = logout;
 window.customAlert = customAlert;

@@ -1,21 +1,36 @@
-# Binaries
-gateway
-keymgr
-
-# Environment
+# Environment Variables (Contains Secrets!)
 .env
-.env.*
-
-# OS
-.DS_Store
 
 # Logs
 *.log
+mock.log
 
-# Editor
-.vscode/
+# Build Artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+go.sum
+zaps-gateway
+keymgr
+mock_deepseek
+redaction_test
+
+# Test Coverage
+*.out
+coverage.txt
+
+# IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
 
-# Keys
-id_rsa
-*.pem
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml

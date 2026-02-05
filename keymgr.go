@@ -105,6 +105,7 @@ func handleCreate(rdb *redis.Client) {
 		UsageCount:  0,
 		RateLimit:   100, // default: 100 req/min
 		Enabled:     true,
+		OwnerID:     "system", // CLI created keys belong to system
 	}
 
 	if err := StoreAPIKey(rdb, apiKey); err != nil {

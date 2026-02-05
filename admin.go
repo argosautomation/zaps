@@ -295,6 +295,8 @@ func HandleListKeys(rdb *redis.Client) fiber.Handler {
 // HandleGenerateKey creates a new API key
 func HandleGenerateKey(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		username := c.Locals("admin_user").(string)
+
 		var req struct {
 			Name string `json:"name"`
 		}
@@ -315,6 +317,7 @@ func HandleGenerateKey(rdb *redis.Client) fiber.Handler {
 			Name:      req.Name,
 			CreatedAt: now,
 			Enabled:   true,
+			OwnerID:   username, // Assign to current admin user
 		}
 
 		data, _ := json.Marshal(meta)
@@ -439,6 +442,46 @@ func HandleUpdateConfig(rdb *redis.Client) fiber.Handler {
 			// Update runtime variable if we are caching it?
 			// Ideally Gateway logic reads Redis on every request or caches it.
 			// We'll update logic in main.go to read from Redis.
+		}
+
+		return c.JSON(fiber.Map{"status": "updated"})
+	}
+}
+
+// HandleGetProviders returns provider config for the user
+func HandleGetProviders(rdb *redis.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		username := c.Locals("admin_user").(string)
+		providers, err := GetAllProviders(rdb, username)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Redis error"})
+		}
+		// Mask keys
+		masked := make(map[string]string)
+		for k, v := range providers {
+			if len(v) > 8 {
+				masked[k] = v[:4] + "..." + v[len(v)-4:]
+			} else {
+				masked[k] = "***"
+			}
+		}
+		return c.JSON(masked)
+	}
+}
+
+// HandleUpdateProviders updates provider config
+func HandleUpdateProviders(rdb *redis.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		username := c.Locals("admin_user").(string)
+		var req map[string]string
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+
+		for provider, key := range req {
+			if key != "" {
+				SaveProviderKey(rdb, username, provider, key)
+			}
 		}
 
 		return c.JSON(fiber.Map{"status": "updated"})
