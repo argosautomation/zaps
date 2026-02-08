@@ -1,46 +1,100 @@
 version: '3.8'
 
 services:
-  gateway:
-    build: .
-    restart: always
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: zaps-postgres
+    environment:
+      POSTGRES_DB: zaps
+      POSTGRES_USER: zaps_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password}
     ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    depends_on:
-      - redis
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - gateway-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U zaps_user -d zaps" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
+  # Redis Cache
   redis:
     image: redis:alpine
-    restart: always
+    container_name: zaps-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gateway-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend Gateway
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zaps-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis:6379
+      - DATABASE_URL=postgres://zaps_user:${POSTGRES_PASSWORD:-dev_password}@postgres:5432/zaps?sslmode=disable
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_API_URL=${DEEPSEEK_API_URL:-https://api.deepseek.com}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - MAILGUN_DOMAIN=${MAILGUN_DOMAIN}
+      - JWT_SECRET=${JWT_SECRET:-development-secret-change-in-production}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
+      - GO_ENV=${GO_ENV:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - gateway-network
     volumes:
-      - redis-data:/data
-
-  caddy:
-    image: caddy:latest
+      - ./backend:/app
     restart: unless-stopped
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: zaps-frontend
     ports:
-      - "80:80"
-      - "443:443"
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      - NODE_ENV=${NODE_ENV:-development}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - gateway-network
     depends_on:
       - gateway
-    networks:
-      - gateway-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
 
 networks:
   gateway-network:
     driver: bridge
-
-volumes:
-  redis-data:
-  caddy_data:
-  caddy_config:

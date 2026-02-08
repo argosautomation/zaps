@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Backend (Go Gateway)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=:3000
+      - FRONTEND_URL=http://localhost:3001
+      - REDIS_URL=redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-zaps}
+      - DB_SSLMODE=disable
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - zaps-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOSTNAME=0.0.0.0
+      - BACKEND_URL=http://backend:3000
+    depends_on:
+      - backend
+    networks:
+      - zaps-network
+
+  # Database (Postgres)
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-zaps}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - zaps-network
+
+  # Cache (Redis)
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - zaps-network
+
+networks:
+  zaps-network:
+    driver: bridge
+
+volumes:
+  pg_data:
+  redis_data:

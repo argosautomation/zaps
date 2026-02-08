@@ -14,8 +14,8 @@ import time
 from datetime import datetime
 
 # Configuration
-GATEWAY_URL = "https://zaps.ai/v1/chat/completions"
-API_KEY = "gk_x37x-a_xBS9uFO90YP8m3omAXQHIKcMg"  # Glass Desk key
+GATEWAY_URL = "http://localhost:3000/v1/chat/completions"
+API_KEY = "gk_TEST_KEY_123"  # Manual Stress Test key
 
 def random_email():
     names = ["alice", "bob", "charlie", "david"]
