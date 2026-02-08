@@ -34,19 +34,83 @@ export default function HeroTechnical() {
             }}>
 
                 {/* Code Badge */}
-                <div style={{
-                    display: 'inline-block',
-                    padding: '8px 16px',
-                    background: 'rgba(6, 182, 212, 0.1)',
-                    border: '1px solid rgba(6, 182, 212, 0.3)',
-                    borderRadius: '100px',
-                    fontSize: '14px',
-                    fontFamily: 'monospace',
-                    color: '#22D3EE',
-                    marginBottom: '32px'
-                }}>
-                    $ docker run zaps-gateway
-                </div>
+                <button
+                    onClick={() => {
+                        // Magic Copy: We copy the working command (with ports) even though we display the clean one
+                        navigator.clipboard.writeText('docker run -p 3000:3000 zapsai/zaps-gateway')
+                        const el = document.getElementById('copy-feedback')
+                        if (el) {
+                            el.style.opacity = '1'
+                            el.style.transform = 'translateY(0)'
+                            setTimeout(() => {
+                                el.style.opacity = '0'
+                                el.style.transform = 'translateY(10px)'
+                            }, 2000)
+                        }
+                    }}
+                    className="group"
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px 24px',
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        border: '1px solid rgba(34, 211, 238, 0.2)',
+                        borderRadius: '100px',
+                        fontSize: '14px',
+                        fontFamily: 'monospace',
+                        color: '#22D3EE',
+                        marginBottom: '32px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        position: 'relative'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(34, 211, 238, 0.5)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(34, 211, 238, 0.2)'}
+                >
+                    <span style={{ opacity: 0.5 }}>$</span>
+                    <span>docker run zapsai/zaps-gateway</span>
+
+                    {/* Copy Icon */}
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ opacity: 0.5, transition: 'opacity 0.2s' }}
+                        className="group-hover:opacity-100"
+                    >
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+
+                    {/* Copied Feedback */}
+                    <div
+                        id="copy-feedback"
+                        style={{
+                            position: 'absolute',
+                            top: '-30px',
+                            left: '50%',
+                            transform: 'translate(-50%, 10px)',
+                            background: '#22D3EE',
+                            color: '#0F172A',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            opacity: 0,
+                            pointerEvents: 'none',
+                            transition: 'all 0.2s ease',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        Copied!
+                    </div>
+                </button>
 
                 {/* Headline */}
                 <h1 style={{

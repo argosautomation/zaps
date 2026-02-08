@@ -33,27 +33,28 @@ export default function Navbar() {
                 padding: '0 24px',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                position: 'relative'
             }}>
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 font-bold text-xl text-white">
+                <Link href="/" className="flex items-center gap-2 font-bold text-xl text-white z-10">
                     <span style={{ fontSize: '24px' }}>⚡</span>
                     Zaps.ai
                 </Link>
 
-                {/* Desktop Nav */}
-                <div className="hidden md:flex items-center gap-8">
-                    <Link href="#features" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">features</Link>
-                    <Link href="#pricing" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">pricing</Link>
-                    <Link href="https://github.com/zaps-ai/gateway" target="_blank" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">docs</Link>
+                {/* Desktop Nav - Absolutely Centered */}
+                <div className="hidden md:flex items-center gap-10 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <Link href="#features" className="text-slate-300 hover:text-white hover:text-cyan-400 transition-colors text-sm font-semibold tracking-wide">Features</Link>
+                    <Link href="#pricing" className="text-slate-300 hover:text-white hover:text-cyan-400 transition-colors text-sm font-semibold tracking-wide">Pricing</Link>
+                    <Link href="https://github.com/zaps-ai/gateway" target="_blank" className="text-slate-300 hover:text-white hover:text-cyan-400 transition-colors text-sm font-semibold tracking-wide">Docs</Link>
                 </div>
 
                 {/* Auth Buttons */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 z-10">
                     <Link href="/login" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">
                         Log in
                     </Link>
-                    <Link href="/signup" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-2 px-4 rounded-lg transition-all text-sm">
+                    <Link href="/signup" style={{ padding: '12px 32px' }} className="inline-flex items-center justify-center bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-full transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:scale-105 whitespace-nowrap">
                         Get Started
                     </Link>
                 </div>

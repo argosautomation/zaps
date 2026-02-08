@@ -1,0 +1,13 @@
+.env
+.env.local
+.git
+backend.log
+tmp/
+*.key
+*.pem
+node_modules/
+dist/
+build/
+.DS_Store
+zaps-gateway
+Dockerfile
