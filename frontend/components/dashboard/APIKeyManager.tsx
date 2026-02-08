@@ -80,20 +80,25 @@ export default function APIKeyManager() {
             {/* Create Key Form (Simple Inline) */}
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-white mb-3">Create New Key</h3>
-                <form onSubmit={handleCreate} className="flex gap-2">
-                    <input
-                        type="text"
-                        placeholder="Key Name (e.g. Production App)"
-                        value={newKeyName}
-                        onChange={(e) => setNewKeyName(e.target.value)}
-                        className="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded-md px-3 py-2 text-white text-sm focus:outline-none"
-                        required
-                    />
-                    {/* ... button remains same ... */}
+                <form onSubmit={handleCreate} className="flex gap-4 items-end">
+                    <div className="w-full max-w-md">
+                        <label htmlFor="keyName" className="block text-sm font-medium text-slate-400 mb-2">
+                            Key Name
+                        </label>
+                        <input
+                            id="keyName"
+                            type="text"
+                            placeholder="e.g. Production App"
+                            value={newKeyName}
+                            onChange={(e) => setNewKeyName(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-500 rounded-md px-3 py-2 text-white text-sm focus:outline-none"
+                            required
+                        />
+                    </div>
                     <button
                         type="submit"
                         disabled={isCreating}
-                        className="bg-cyan-500 hover:bg-cyan-400 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50 shadow-[0_0_15px_rgba(6,182,212,0.5)] border border-cyan-400/50"
+                        className="bg-cyan-500 hover:bg-cyan-400 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 disabled:opacity-50 shadow-[0_0_15px_rgba(6,182,212,0.5)] border border-cyan-400/50 mb-[1px]"
                     >
                         {isCreating ? 'Creating...' : <><Plus size={16} /> Create Key</>}
                     </button>

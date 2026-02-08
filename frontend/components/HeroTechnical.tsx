@@ -142,7 +142,7 @@ export default function HeroTechnical() {
                     margin: '0 auto 48px',
                     fontFamily: 'monospace'
                 }}>
-                    {'< 10ms latency • Custom Regex Rules • 100% Stateless'}
+                    {'< 10ms latency • Smart PII Detection • 100% Stateless'}
                 </p>
 
                 {/* CTA Buttons */}
@@ -165,7 +165,23 @@ export default function HeroTechnical() {
                         View Documentation
                     </Link>
                 </div>
+
+                {/* Trusted By */}
+                <p style={{ fontSize: '12px', color: '#64748B', marginTop: '24px', marginBottom: '16px', letterSpacing: '1px' }}>TRUSTED BY ENGINEERING TEAMS AT</p>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '40px',
+                    opacity: 0.5,
+                    filter: 'grayscale(100%)',
+                    flexWrap: 'wrap'
+                }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>JNTO.co</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Glassdesk.ai</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Pranstech</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Landline Remover</div>
+                </div>
             </div>
-        </section>
+        </section >
     )
 }

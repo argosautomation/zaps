@@ -20,20 +20,20 @@ export default function Features() {
         },
         {
             icon: '🔌',
-            title: 'Works With Any LLM',
-            description: 'OpenAI, Anthropic, Google Gemini, DeepSeek, and any other OpenAI-compatible API. Just change your endpoint.',
+            title: 'Multi-LLM Support',
+            description: 'Native support for OpenAI, Anthropic, Gemini, and DeepSeek. Unified API for all providers.',
             gradient: 'linear-gradient(135deg, #10B981 0%, #14B8A6 100%)' // Green to Teal
         },
         {
             icon: '📊',
             title: 'Compliance Dashboard',
-            description: 'See exactly what data was protected, track API usage, and generate compliance reports for audits (GDPR, HIPAA, SOC 2).',
+            description: 'See exactly what data was protected, track API usage, and view or export detailed audit logs for GDPR, HIPAA, and SOC 2.',
             gradient: 'linear-gradient(135deg, #6366F1 0%, #3B82F6 100%)' // Indigo to Blue
         },
         {
             icon: '🧪',
-            title: 'Try Before You Buy',
-            description: 'Live sandbox lets you test protection with real examples. See exactly how your data is protected before going live.',
+            title: 'Free Developer Sandbox',
+            description: 'Get 1,000 free requests per month to test protection with your own data. No credit card required to start.',
             gradient: 'linear-gradient(135deg, #EF4444 0%, #F43F5E 100%)' // Red to Rose
         }
     ]

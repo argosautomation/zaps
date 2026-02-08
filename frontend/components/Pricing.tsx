@@ -20,54 +20,54 @@ export default function Pricing() {
         },
         {
             name: 'Starter',
-            price: '$29',
-            period: '/month',
-            description: 'For growing applications',
+            price: '$49',
+            period: '/mo',
+            description: 'Perfect for growing apps that need real protection.',
             features: [
-                '50,000 requests/month',
-                'Production API keys',
-                'Priority email support',
-                'Advanced analytics',
-                '99.9% SLA',
-                'Custom PII patterns'
+                '50,000 requests/mo',
+                'Secure PII Rehydration',
+                'Custom PII Patterns',
+                'Email & Slack Alerts',
+                '7-day Audit Log Retention'
             ],
-            cta: 'Start Trial',
-            href: '/signup',
-            highlighted: true,
+            cta: 'Start Free Trial',
+            href: '/signup', // Retaining original structure
+            highlighted: true, // Retaining original structure, assuming 'popular' maps to 'highlighted'
         },
         {
             name: 'Pro',
-            price: '$99',
-            period: '/month',
-            description: 'For high-volume production apps',
+            price: '$249',
+            period: '/mo',
+            description: 'For scaling teams requiring compliance & control.',
             features: [
-                '1,000,000 requests/month',
+                '250,000 requests/mo',
                 'Everything in Starter',
-                'Priority support',
-                'Webhook alerts',
-                'Team collaboration',
-                'SSO (coming soon)'
+                'Secure PII Rehydration', // Added as per instruction
+                'SSO & SAML (Coming Soon)',
+                'Team Collaboration Seats',
+                '30-day Audit Log Retention',
+                'Priority Support'
             ],
-            cta: 'Start Trial',
-            href: '/signup',
-            highlighted: false,
+            cta: 'Start Pro Trial',
+            href: '/signup', // Retaining original structure
+            highlighted: false, // Retaining original structure, assuming 'popular' maps to 'highlighted'
         },
         {
             name: 'Enterprise',
             price: 'Custom',
             period: '',
-            description: 'For mission-critical workloads',
+            description: 'Bank-grade security for regulated industries.',
             features: [
-                'Unlimited requests',
-                'Dedicated infrastructure',
-                'Phone + Slack support',
+                'Unlimited volume',
+                'On-Premise Deployment',
+                'HIPAA BAA & SOC 2 Report',
+                'Dedicated Success Manager',
                 'Custom SLA',
-                'On-premise deployment',
-                'Advanced security'
+                '99.99% Uptime Guarantee'
             ],
             cta: 'Contact Sales',
-            href: 'mailto:sales@zaps.ai',
-            highlighted: false,
+            href: 'mailto:sales@zaps.ai', // Retaining original structure
+            highlighted: false, // Retaining original structure, assuming 'popular' maps to 'highlighted'
         },
     ]
 

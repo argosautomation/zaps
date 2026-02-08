@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -56,8 +57,8 @@ func HandleRegister(c *fiber.Ctx) error {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	// Validate password strength
-	if len(req.Password) < 12 {
-		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters"})
+	if err := services.ValidatePassword(req.Password); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Check if email already exists
@@ -435,4 +436,187 @@ func HandleResetPassword(c *fiber.Ctx) error {
 // Helper to prevent timing attacks
 func randomDuration(min, max int) time.Duration {
 	return time.Duration(min) * time.Millisecond
+}
+
+// HandleGoogleLogin redirects the user to the Google OAuth consent screen
+func HandleGoogleLogin(c *fiber.Ctx) error {
+	url := services.GetGoogleLoginURL()
+	if url == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "Google OAuth not configured"})
+	}
+	// Temporary redirect
+	return c.Redirect(url, 307)
+}
+
+// HandleGitHubLogin redirects the user to the GitHub OAuth consent screen
+func HandleGitHubLogin(c *fiber.Ctx) error {
+	url := services.GetGitHubLoginURL()
+	if url == "" {
+		return c.Status(500).JSON(fiber.Map{"error": "GitHub OAuth not configured"})
+	}
+	// Temporary redirect
+	return c.Redirect(url, 307)
+}
+
+// LoginWithProvider handles the common logic for social login/registration
+func LoginWithProvider(c *fiber.Ctx, email, provider, providerID, picture string) error {
+	var user db.User
+	var existingProviderID sql.NullString
+
+	providerColumn := "google_id"
+	if provider == "github" {
+		providerColumn = "github_id"
+	}
+
+	var googleID, githubID sql.NullString
+
+	// We select both columns to avoid dynamic struct scanning issues
+	err := db.DB.QueryRow(`
+		SELECT id, tenant_id, email, google_id, github_id
+		FROM users 
+		WHERE email = $1
+	`, email).Scan(&user.ID, &user.TenantID, &user.Email, &googleID, &githubID)
+
+	if provider == "google" {
+		existingProviderID = googleID
+	} else {
+		existingProviderID = githubID
+	}
+
+	if err == sql.ErrNoRows {
+		// Register new user
+		user.ID = uuid.New()
+		tenantID := uuid.New()
+		orgName := "My Organization"
+
+		tx, err := db.DB.Begin()
+		if err != nil {
+			return c.Status(500).SendString("Database error")
+		}
+		defer tx.Rollback()
+
+		_, err = tx.Exec(`INSERT INTO tenants (id, name, subscription_tier, monthly_quota) VALUES ($1, $2, 'free', 1000)`, tenantID, orgName)
+		if err != nil {
+			return c.Status(500).SendString("Failed to create tenant")
+		}
+
+		query := fmt.Sprintf(`
+			INSERT INTO users (id, tenant_id, email, %s, avatar_url, email_verified, password_hash) 
+			VALUES ($1, $2, $3, $4, $5, TRUE, 'SOCIAL_LOGIN_ONLY')
+		`, providerColumn)
+
+		_, err = tx.Exec(query, user.ID, tenantID, email, providerID, picture)
+		if err != nil {
+			return c.Status(500).SendString("Failed to create user")
+		}
+
+		if err = tx.Commit(); err != nil {
+			return c.Status(500).SendString("Failed to commit transaction")
+		}
+
+		user.TenantID = tenantID
+
+	} else if err != nil {
+		return c.Status(500).SendString("Database error")
+	} else {
+		// Link Provider ID if not linked
+		if !existingProviderID.Valid {
+			query := fmt.Sprintf("UPDATE users SET %s = $1, avatar_url = $2, email_verified = TRUE WHERE id = $3", providerColumn)
+			_, err = db.DB.Exec(query, providerID, picture, user.ID)
+			if err != nil {
+				fmt.Println("Failed to link provider ID:", err)
+			}
+		}
+	}
+
+	// Generate JWT
+	claims := jwt.MapClaims{
+		"user_id":   user.ID.String(),
+		"tenant_id": user.TenantID.String(),
+		"exp":       time.Now().Add(24 * time.Hour).Unix(),
+	}
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "default-secret-key-change-me"
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	t, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return c.Status(500).SendString("Failed to generate token")
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "session",
+		Value:    t,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HTTPOnly: true,
+		Secure:   false,
+		SameSite: "Lax",
+	})
+
+	return c.Redirect("http://localhost:3001/dashboard", 302)
+}
+
+// HandleGoogleCallback handles the callback from Google
+func HandleGoogleCallback(c *fiber.Ctx) error {
+	code := c.Query("code")
+	if code == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Code not found"})
+	}
+
+	googleUser, err := services.GetGoogleUser(code)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	email, ok := googleUser["email"].(string)
+	if !ok {
+		return c.Status(500).JSON(fiber.Map{"error": "Email not found in Google response"})
+	}
+
+	googleID, ok := googleUser["id"].(string)
+	if !ok {
+		if floatID, ok := googleUser["id"].(float64); ok {
+			googleID = fmt.Sprintf("%.0f", floatID)
+		} else {
+			return c.Status(500).JSON(fiber.Map{"error": "Google ID not found"})
+		}
+	}
+
+	picture, _ := googleUser["picture"].(string)
+
+	return LoginWithProvider(c, email, "google", googleID, picture)
+}
+
+// HandleGitHubCallback handles the callback from GitHub
+func HandleGitHubCallback(c *fiber.Ctx) error {
+	code := c.Query("code")
+	if code == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Code not found"})
+	}
+
+	githubUser, err := services.GetGitHubUser(code)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	email, ok := githubUser["email"].(string)
+	if !ok || email == "" {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "Email not found. Please verify your email on GitHub or make it public.",
+		})
+	}
+
+	var githubID string
+	if idNum, ok := githubUser["id"].(float64); ok {
+		githubID = fmt.Sprintf("%.0f", idNum)
+	} else if idStr, ok := githubUser["id"].(string); ok {
+		githubID = idStr
+	} else {
+		return c.Status(500).JSON(fiber.Map{"error": "GitHub ID not found"})
+	}
+
+	picture, _ := githubUser["avatar_url"].(string)
+
+	return LoginWithProvider(c, email, "github", githubID, picture)
 }

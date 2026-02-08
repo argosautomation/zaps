@@ -44,6 +44,14 @@ export default function AuditLogTable() {
                     <Shield size={18} className="text-cyan-400" />
                     Security & Activity Logs
                 </h3>
+                <a
+                    href="/api/dashboard/reports/export"
+                    target="_blank"
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded transition-colors"
+                >
+                    <FileText size={14} />
+                    Export CSV
+                </a>
             </div>
 
             <table className="min-w-full divide-y divide-slate-800">

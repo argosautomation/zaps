@@ -33,9 +33,9 @@ export default function DashboardLayout({
     return (
         <div className="min-h-screen bg-slate-950">
             <Sidebar />
-            <div className="dashboard-content">
+            <div className="dashboard-content lg:pl-72">
                 <main className="py-10">
-                    <div className="dashboard-inner">
+                    <div className="dashboard-inner px-8">
                         {children}
                     </div>
                 </main>

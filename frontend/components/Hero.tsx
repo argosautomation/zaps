@@ -132,6 +132,22 @@ export default function Hero() {
                         Enterprise-grade protection
                     </span>
                 </div>
+
+                {/* Trusted By */}
+                <p style={{ fontSize: '12px', color: '#64748B', marginTop: '48px', marginBottom: '16px', letterSpacing: '1px' }}>TRUSTED BY INNOVATORS AT</p>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '40px',
+                    opacity: 0.5,
+                    filter: 'grayscale(100%)',
+                    flexWrap: 'wrap'
+                }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>JNTO.co</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Glassdesk.ai</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Pranstech</div>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold' }}>Landline Remover</div>
+                </div>
             </div>
         </section>
     )

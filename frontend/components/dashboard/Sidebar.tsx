@@ -9,7 +9,9 @@ import {
     Settings,
     LogOut,
     Zap,
-    Terminal
+    Terminal,
+    CreditCard,
+    Shield
 } from 'lucide-react';
 
 const navigation = [
@@ -18,6 +20,8 @@ const navigation = [
     { name: 'Providers', href: '/dashboard/providers', icon: Zap },
     { name: 'API Keys', href: '/dashboard/keys', icon: Key },
     { name: 'Audit Logs', href: '/dashboard/logs', icon: ShieldAlert },
+    { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+    { name: 'Admin', href: '/dashboard/admin', icon: Shield },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

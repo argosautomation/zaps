@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"zaps/db"
@@ -219,4 +220,55 @@ func GetAuditLogs(c *fiber.Ctx) error {
 		"page":  page,
 		"limit": limit,
 	})
+}
+
+// ExportAuditLogs streams audit logs as a CSV file
+func ExportAuditLogs(c *fiber.Ctx) error {
+	tenantID, _ := uuid.Parse(c.Locals("tenant_id").(string))
+
+	c.Set("Content-Type", "text/csv")
+	c.Set("Content-Disposition", `attachment; filename="compliance_report.csv"`)
+
+	// Write CSV Header
+	c.Write([]byte("Timestamp,Event Type,IP Address,Details\n"))
+
+	// Stream rows
+	rows, err := db.DB.Query(`
+		SELECT created_at, event_type, ip_address, event_data
+		FROM audit_logs 
+		WHERE tenant_id = $1 
+		ORDER BY created_at DESC
+		LIMIT 1000
+	`, tenantID)
+
+	if err != nil {
+		return c.Status(500).SendString("Failed to fetch logs")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var createdAt time.Time
+		var eventType string
+		var ipAddress string
+		var eventData []byte // JSONB raw bytes
+
+		if err := rows.Scan(&createdAt, &eventType, &ipAddress, &eventData); err != nil {
+			continue
+		}
+
+		// Simple CSV escaping (replace " with "")
+		details := string(eventData)
+		details = strings.ReplaceAll(details, "\"", "\"\"")
+
+		line := fmt.Sprintf("%s,%s,%s,\"%s\"\n",
+			createdAt.Format(time.RFC3339),
+			eventType,
+			ipAddress,
+			details,
+		)
+
+		c.Write([]byte(line))
+	}
+
+	return nil
 }

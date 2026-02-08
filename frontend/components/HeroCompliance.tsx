@@ -112,9 +112,10 @@ export default function HeroCompliance() {
                     opacity: 0.5,
                     filter: 'grayscale(100%)'
                 }}>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Acme Corp</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Globex</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Soylent</div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>JNTO.co</div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Glassdesk.ai</div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Pranstech</div>
+                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Landline Remover</div>
                 </div>
             </div>
         </section>
