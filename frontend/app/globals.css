@@ -1,11 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+    background-color: #020617;
+    /* Slate 950 */
+    color: #ffffff;
+}
 
-@layer base {
-    body {
-        @apply bg-slate-950 text-white antialiased;
-    }
+body {
+    background-color: #020617;
+    color: #ffffff;
 }
