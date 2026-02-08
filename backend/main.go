@@ -400,8 +400,8 @@ func handleChatCompletion(c *fiber.Ctx) error {
 		"redact_count": len(secretMap),
 		"request_len":  len(cleanBody),
 		"response_len": len(responseBody),
-		// Store full secrets map for drill-down inspection (Encrypted in DB ideally, but JSONB for now)
-		"pii_details": secretMap,
+		// Store sanitized secrets for debugging (Masked)
+		"pii_details": sanitizeMap(secretMap),
 	}
 
 	services.LogAuditAsync(ownerID, nil, "PROXY_REQUEST", eventData, c.IP(), c.Get("User-Agent"))
@@ -543,4 +543,13 @@ func handleListModels(c *fiber.Ctx) error {
 		"object": "list",
 		"data":   availableModels,
 	})
+}
+
+// sanitizeMap creates a copy of the secret map with masked values
+func sanitizeMap(secrets map[string]string) map[string]string {
+	sanitized := make(map[string]string)
+	for k, v := range secrets {
+		sanitized[k] = maskSecret(v)
+	}
+	return sanitized
 }
