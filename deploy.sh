@@ -25,6 +25,9 @@ tar -czf deploy.tar.gz \
     --exclude='backend/keymgr' \
     --exclude='backend/tmp' \
     --exclude='backend/zaps-gateway' \
+    --exclude='.env' \
+    --exclude='backend/.env' \
+    --exclude='frontend/.env' \
     .
 
 # 3. Upload to server

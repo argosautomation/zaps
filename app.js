@@ -112,7 +112,7 @@ async function loadConfig() {
     if (res) {
         const data = await res.json();
         // Update UI if we had a field for it
-        console.log("Current Config:", data);
+        // Config loaded
 
         // Maybe update stats card?
     }

@@ -20,6 +20,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
       - DB_NAME=${DB_NAME:-zaps}
       - DB_SSLMODE=disable
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/zaps?sslmode=disable
     env_file:
       - ./backend/.env
     depends_on:

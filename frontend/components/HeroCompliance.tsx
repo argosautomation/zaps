@@ -1,121 +1,88 @@
 'use client'
 
 import Link from 'next/link'
+import DecryptedText from './DecryptedText'
 
 export default function HeroCompliance() {
     return (
-        <section style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '80px 24px',
-            position: 'relative',
-            background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)'
-        }}>
+        <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 py-20 px-6">
 
-            {/* Shield Background */}
-            <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '600px',
-                height: '600px',
-                background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)',
-                filter: 'blur(80px)',
-            }}></div>
+            {/* Background Effects */}
+            <div className="absolute inset-0 z-0">
+                {/* Grid Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-20"></div>
 
-            <div style={{
-                maxWidth: '1200px',
-                textAlign: 'center',
-                position: 'relative',
-                zIndex: 10
-            }}>
+                {/* Green/Emerald Tint for Compliance */}
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse"></div>
+                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-600/10 rounded-full blur-[100px] animate-pulse delay-1000"></div>
+            </div>
+
+            <div className="relative z-10 max-w-5xl mx-auto text-center">
 
                 {/* Compliance Badges */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '16px',
-                    marginBottom: '32px'
-                }}>
+                <div className="flex justify-center gap-4 mb-8">
                     {['HIPAA Ready', 'GDPR Compliant', 'SOC 2 Type II'].map(badge => (
-                        <div key={badge} style={{
-                            padding: '6px 12px',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            border: '1px solid rgba(16, 185, 129, 0.3)',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            color: '#34D399',
-                            textTransform: 'uppercase',
-                            letterSpacing: '1px'
-                        }}>
+                        <div key={badge} className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-xs font-bold text-emerald-400 uppercase tracking-widest backdrop-blur-sm">
                             {badge}
                         </div>
                     ))}
                 </div>
 
                 {/* Headline */}
-                <h1 style={{
-                    fontSize: 'clamp(32px, 8vw, 72px)',
-                    fontWeight: '900',
-                    marginBottom: '24px',
-                    lineHeight: '1.2'
-                }}>
-                    Instant <span style={{ color: '#34D399' }}>Compliance</span> for <br />
-                    Generative AI
+                <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight text-white mb-8 leading-tight">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 via-emerald-400 to-teal-500">
+                        <DecryptedText
+                            text="Instant Compliance"
+                            animateOn="view"
+                            revealDirection="start"
+                            sequential={true}
+                            speed={70}
+                            maxIterations={10}
+                            characters="ABCDEF0123456789"
+                            parentClassName="inline-block"
+                            className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-200 via-emerald-400 to-teal-500"
+                            encryptedClassName="text-emerald-800"
+                        />
+                    </span>
+                    <br />
+                    for Generative AI
                 </h1>
 
                 {/* Subheadline */}
-                <p style={{
-                    fontSize: 'clamp(18px, 3vw, 24px)',
-                    color: '#CBD5E1',
-                    marginBottom: '16px',
-                    maxWidth: '900px',
-                    margin: '0 auto 16px'
-                }}>
+                <p className="text-lg md:text-xl text-slate-300 font-medium mb-12 max-w-3xl mx-auto leading-relaxed">
                     Meet data residency and privacy requirements automatically.
                     We filter PII before it ever touches OpenAI, Anthropic, or external vendors.
                 </p>
 
                 {/* CTA Buttons */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '16px',
-                    justifyContent: 'center',
-                    flexWrap: 'wrap',
-                    marginBottom: '48px',
-                    marginTop: '32px'
-                }}>
-                    <Link href="/signup" className="cta-button" style={{
-                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                        boxShadow: '0 10px 40px rgba(16, 185, 129, 0.3)',
-                        color: 'white'
-                    }}>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+                    <Link
+                        href="/signup"
+                        className="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white text-lg font-bold rounded-full transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:scale-105"
+                    >
                         Download Compliance Report
                     </Link>
 
-                    <Link href="#pricing" className="cta-secondary">
+                    <Link
+                        href="#pricing"
+                        className="px-8 py-4 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 rounded-full font-semibold transition-all hover:bg-slate-800/50"
+                    >
                         View Enterprise Plans
                     </Link>
                 </div>
 
-                {/* Logos */}
-                <p style={{ fontSize: '14px', color: '#64748B', marginBottom: '16px' }}>TRUSTED BY COMPLIANCE TEAMS AT</p>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '40px',
-                    opacity: 0.5,
-                    filter: 'grayscale(100%)'
-                }}>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>JNTO.co</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Glassdesk.ai</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Pranstech</div>
-                    <div style={{ fontSize: '20px', fontWeight: 'bold' }}>Landline Remover</div>
+                {/* Trusted By */}
+                <div className="border-t border-slate-800/50 pt-10">
+                    <p className="text-xs font-semibold tracking-widest text-slate-500 uppercase mb-8">
+                        Trusted by Compliance Teams at
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                        {['JNTO.co', 'Glassdesk.ai', 'Pranstech', 'Landline Remover'].map((brand) => (
+                            <div key={brand} className="text-xl font-bold text-slate-300 hover:text-white transition-colors cursor-default">
+                                {brand}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </section>
