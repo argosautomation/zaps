@@ -554,7 +554,11 @@ func LoginWithProvider(c *fiber.Ctx, email, provider, providerID, picture string
 		SameSite: "Lax",
 	})
 
-	return c.Redirect("http://localhost:3001/dashboard", 302)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3001"
+	}
+	return c.Redirect(frontendURL+"/dashboard", 302)
 }
 
 // HandleGoogleCallback handles the callback from Google
