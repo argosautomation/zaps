@@ -33,7 +33,7 @@ func GetProviders(rdb *redis.Client) fiber.Handler {
 		tenantID := c.Locals("tenant_id").(string)
 
 		// List of supported providers to check
-		supported := []string{"deepseek", "openai", "anthropic"}
+		supported := []string{"deepseek", "openai", "anthropic", "gemini"}
 
 		configs := []map[string]interface{}{}
 

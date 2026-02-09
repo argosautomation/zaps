@@ -22,12 +22,14 @@ var ProviderModels = map[string][]string{
 	"openai":    {"gpt-4-turbo", "gpt-3.5-turbo"},
 	"anthropic": {"claude-3-opus", "claude-3-sonnet"},
 	"deepseek":  {"deepseek-chat", "deepseek-coder"},
+	"gemini":    {"gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro"},
 }
 
 const (
 	ProviderOpenAI    = "openai"
 	ProviderAnthropic = "anthropic"
 	ProviderDeepSeek  = "deepseek"
+	ProviderGemini    = "gemini"
 )
 
 func GetProviderForModel(model string) string {
@@ -47,6 +49,9 @@ func GetProviderURL(provider string) string {
 		return "https://api.openai.com/v1"
 	case ProviderAnthropic:
 		return "https://api.anthropic.com/v1"
+	case ProviderGemini:
+		// Gemini OpenAI Compatibility Endpoint
+		return "https://generativelanguage.googleapis.com/v1beta/openai"
 	case ProviderDeepSeek:
 		url := os.Getenv("DEEPSEEK_API_URL")
 		if url == "" {
