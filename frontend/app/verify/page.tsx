@@ -25,7 +25,7 @@ function VerifyContent() {
 
     const verifyEmail = async (token: string) => {
         try {
-            const response = await fetch(`http://localhost:3000/auth/verify?token=${token}`)
+            const response = await fetch(`/auth/verify?token=${token}`)
             const data = await response.json()
 
             if (!response.ok) {

@@ -46,7 +46,7 @@ export default function LogExplorer() {
     const [page, setPage] = useState(1);
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-    const { data: response, error } = useSWR<AuditLogResponse>(`http://localhost:3000/api/dashboard/logs?page=${page}&limit=20`, fetcher);
+    const { data: response, error } = useSWR<AuditLogResponse>(`/api/dashboard/logs?page=${page}&limit=20`, fetcher);
 
     const logs = response?.data || [];
     const isLoading = !response && !error;

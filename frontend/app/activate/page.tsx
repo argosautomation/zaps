@@ -25,7 +25,7 @@ function ActivateContent() {
         const checkSession = async () => {
             try {
                 // Try fetching a protected endpoint to verify cookie
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/dashboard/profile`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/profile`, {
                     credentials: 'include'
                 });
 
@@ -54,7 +54,7 @@ function ActivateContent() {
         setErrorMsg('');
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/dashboard/device/approve`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/device/approve`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

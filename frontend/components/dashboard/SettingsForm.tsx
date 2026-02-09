@@ -40,7 +40,7 @@ export default function SettingsForm() {
         const fetchSettings = async () => {
             try {
                 // Fetch Profile
-                const profileRes = await fetch('http://localhost:3000/api/dashboard/profile', {
+                const profileRes = await fetch('/api/dashboard/profile', {
                     credentials: 'include',
                 });
                 if (profileRes.ok) {
@@ -53,7 +53,7 @@ export default function SettingsForm() {
                 }
 
                 // Fetch Organization
-                const orgRes = await fetch('http://localhost:3000/api/dashboard/organization', {
+                const orgRes = await fetch('/api/dashboard/organization', {
                     credentials: 'include',
                 });
                 if (orgRes.ok) {
@@ -66,7 +66,7 @@ export default function SettingsForm() {
                 }
 
                 // Fetch Security Status
-                const secRes = await fetch('http://localhost:3000/api/dashboard/security/status', {
+                const secRes = await fetch('/api/dashboard/security/status', {
                     credentials: 'include',
                 });
                 if (secRes.ok) {
@@ -89,7 +89,7 @@ export default function SettingsForm() {
         try {
             let response;
             if (activeTab === 'profile') {
-                response = await fetch('http://localhost:3000/api/dashboard/profile', {
+                response = await fetch('/api/dashboard/profile', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -99,7 +99,7 @@ export default function SettingsForm() {
                     }),
                 });
             } else if (activeTab === 'organization') {
-                response = await fetch('http://localhost:3000/api/dashboard/organization', {
+                response = await fetch('/api/dashboard/organization', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -113,7 +113,7 @@ export default function SettingsForm() {
                     setIsLoading(false);
                     return;
                 }
-                response = await fetch('http://localhost:3000/api/dashboard/security/password', {
+                response = await fetch('/api/dashboard/security/password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -147,7 +147,7 @@ export default function SettingsForm() {
             // Disable 2FA
             if (confirm("Are you sure you want to disable Two-Factor Authentication?")) {
                 try {
-                    const res = await fetch('http://localhost:3000/api/dashboard/security/2fa/disable', {
+                    const res = await fetch('/api/dashboard/security/2fa/disable', {
                         method: 'POST',
                         credentials: 'include',
                     });
@@ -165,7 +165,7 @@ export default function SettingsForm() {
             // Enable 2FA - Generate Secret
             setIs2FALoading(true);
             try {
-                const res = await fetch('http://localhost:3000/api/dashboard/security/2fa/generate', {
+                const res = await fetch('/api/dashboard/security/2fa/generate', {
                     method: 'POST',
                     credentials: 'include',
                 });
@@ -189,7 +189,7 @@ export default function SettingsForm() {
     const handleVerify2FA = async () => {
         setIs2FALoading(true);
         try {
-            const res = await fetch('http://localhost:3000/api/dashboard/security/2fa/enable', {
+            const res = await fetch('/api/dashboard/security/2fa/enable', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

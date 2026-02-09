@@ -29,7 +29,7 @@ interface AuditLogResponse {
 }
 
 export default function AuditLogTable() {
-    const { data: response, error } = useSWR<AuditLogResponse>('http://localhost:3000/api/dashboard/logs?limit=5', fetcher);
+    const { data: response, error } = useSWR<AuditLogResponse>('/api/dashboard/logs?limit=5', fetcher);
 
     // For quick view, we just want the list
     const logs = response?.data;
