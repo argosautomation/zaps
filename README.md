@@ -10,17 +10,17 @@
   </p>
 
   <p align="center">
+    <a href="https://github.com/argosautomation/zaps/actions">
+      <img src="https://img.shields.io/github/actions/workflow/status/argosautomation/zaps/ci.yml?style=for-the-badge&logo=github" alt="Build Status">
+    </a>
     <a href="https://goreportcard.com/report/github.com/argosautomation/zaps">
-      <img src="https://goreportcard.com/badge/github.com/argosautomation/zaps" alt="Go Report Card">
+      <img src="https://goreportcard.com/badge/github.com/argosautomation/zaps?style=for-the-badge" alt="Go Report Card">
     </a>
     <a href="https://github.com/argosautomation/zaps/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/argosautomation/zaps?style=flat-square" alt="License">
+      <img src="https://img.shields.io/github/license/argosautomation/zaps?style=for-the-badge&color=blue" alt="License">
     </a>
-    <a href="https://github.com/argosautomation/zaps/releases">
-      <img src="https://img.shields.io/github/v/release/argosautomation/zaps?style=flat-square&color=cyan" alt="Release">
-    </a>
-    <a href="https://discord.gg/zaps">
-      <img src="https://img.shields.io/discord/1234567890?label=discord&style=flat-square&color=5865F2" alt="Discord">
+    <a href="https://pkg.go.dev/github.com/argosautomation/zaps">
+      <img src="https://img.shields.io/badge/Go-Reference-007d9c?style=for-the-badge&logo=go&logoColor=white" alt="Go Reference">
     </a>
   </p>
 </div>
