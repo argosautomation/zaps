@@ -18,11 +18,14 @@ func GetProfile(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	var user db.User
+	var user struct {
+		db.User
+		IsSuperAdmin bool
+	}
 	err = db.DB.QueryRow(`
-		SELECT id, email, first_name, last_name, created_at, tenant_id 
+		SELECT id, email, first_name, last_name, created_at, tenant_id, is_super_admin
 		FROM users WHERE id = $1`, userID).Scan(
-		&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.CreatedAt, &user.TenantID,
+		&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.CreatedAt, &user.TenantID, &user.IsSuperAdmin,
 	)
 
 	if err == sql.ErrNoRows {
@@ -32,11 +35,12 @@ func GetProfile(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"id":         user.ID,
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-		"created_at": user.CreatedAt,
+		"id":             user.ID,
+		"email":          user.Email,
+		"first_name":     user.FirstName,
+		"last_name":      user.LastName,
+		"created_at":     user.CreatedAt,
+		"is_super_admin": user.IsSuperAdmin,
 	})
 }
 

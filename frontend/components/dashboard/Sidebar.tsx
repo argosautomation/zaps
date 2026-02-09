@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import useSWR from 'swr';
 import {
     BarChart3,
     Key,
@@ -25,8 +26,25 @@ const navigation = [
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
+// Fetcher helper
+const fetcher = (url: string) => fetch(url, { headers: { 'Authorization': 'Bearer ' + getCookie('session') } }).then((res) => res.json());
+
+function getCookie(name: string) {
+    if (typeof document === 'undefined') return '';
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift();
+    return '';
+}
+
 export default function Sidebar() {
     const pathname = usePathname();
+    const { data: user } = useSWR('/api/dashboard/profile', fetcher);
+
+    const filteredNav = navigation.filter(item => {
+        if (item.name === 'Admin' && !user?.is_super_admin) return false;
+        return true;
+    });
 
     return (
         <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
@@ -41,7 +59,7 @@ export default function Sidebar() {
                     <ul role="list" className="flex flex-1 flex-col gap-y-7">
                         <li>
                             <ul role="list" className="-mx-2 space-y-1">
-                                {navigation.map((item) => {
+                                {filteredNav.map((item) => {
                                     const isActive = pathname === item.href;
                                     return (
                                         <li key={item.name}>
