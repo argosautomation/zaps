@@ -10,14 +10,14 @@
   </p>
 
   <p align="center">
-    <a href="https://goreportcard.com/report/github.com/zapsai/zaps-gateway">
-      <img src="https://goreportcard.com/badge/github.com/zapsai/zaps-gateway" alt="Go Report Card">
+    <a href="https://goreportcard.com/report/github.com/argosautomation/zaps">
+      <img src="https://goreportcard.com/badge/github.com/argosautomation/zaps" alt="Go Report Card">
     </a>
-    <a href="https://github.com/zapsai/zaps-gateway/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/zapsai/zaps-gateway?style=flat-square" alt="License">
+    <a href="https://github.com/argosautomation/zaps/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/argosautomation/zaps?style=flat-square" alt="License">
     </a>
-    <a href="https://github.com/zapsai/zaps-gateway/releases">
-      <img src="https://img.shields.io/github/v/release/zapsai/zaps-gateway?style=flat-square&color=cyan" alt="Release">
+    <a href="https://github.com/argosautomation/zaps/releases">
+      <img src="https://img.shields.io/github/v/release/argosautomation/zaps?style=flat-square&color=cyan" alt="Release">
     </a>
     <a href="https://discord.gg/zaps">
       <img src="https://img.shields.io/discord/1234567890?label=discord&style=flat-square&color=5865F2" alt="Discord">
@@ -58,8 +58,8 @@ docker run -p 3000:3000 \
 Or clone and run with Docker Compose:
 
 ```bash
-git clone https://github.com/zapsai/zaps-gateway.git
-cd zaps-gateway
+git clone https://github.com/argosautomation/zaps.git
+cd zaps
 docker-compose up -d
 ```
 
