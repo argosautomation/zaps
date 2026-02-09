@@ -17,7 +17,7 @@ function getCookie(name: string) {
 }
 
 export default function DashboardOverview() {
-    const { data: stats, error } = useSWR('http://localhost:3000/api/dashboard/stats', fetcher);
+    const { data: stats, error } = useSWR('/api/dashboard/stats', fetcher);
 
     const loading = !stats && !error;
 
