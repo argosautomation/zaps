@@ -4,12 +4,14 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import ResendVerificationButton from '@/components/ResendVerificationButton'
 
 function VerifyContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
     const [message, setMessage] = useState('')
+    const [email, setEmail] = useState('')
 
     useEffect(() => {
         const token = searchParams.get('token')
@@ -29,7 +31,9 @@ function VerifyContent() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Verification failed')
+                const error = new Error(data.error || 'Verification failed') as any
+                error.data = data
+                throw error
             }
 
             setStatus('success')
@@ -42,6 +46,7 @@ function VerifyContent() {
         } catch (err: any) {
             setStatus('error')
             setMessage(err.message || 'Verification failed')
+            if (err.data?.email) setEmail(err.data.email)
         }
     }
 
@@ -70,12 +75,21 @@ function VerifyContent() {
                         <div className="text-6xl mb-4">❌</div>
                         <h2 className="text-2xl font-bold mb-2 text-red-400">Verification Failed</h2>
                         <p className="text-gray-300 mb-6">{message}</p>
-                        <a
-                            href="/signup"
-                            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
-                        >
-                            Sign Up Again
-                        </a>
+                        {email ? (
+                            <div className="flex flex-col items-center gap-4">
+                                <ResendVerificationButton email={email} />
+                                <a href="/login" className="text-sm text-slate-400 hover:text-white transition-colors">
+                                    Back to Login
+                                </a>
+                            </div>
+                        ) : (
+                            <a
+                                href="/signup"
+                                className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+                            >
+                                Sign Up Again
+                            </a>
+                        )}
                     </>
                 )}
             </div>

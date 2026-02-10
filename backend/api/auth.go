@@ -158,6 +158,10 @@ func HandleVerifyEmail(c *fiber.Ctx) error {
 	`, token).Scan(&userID, &tenantID, &email, &tokenExpiry)
 
 	if err == sql.ErrNoRows {
+		// Try to find the user by token anyway to see if it's just expired/consumed
+		// This is a bit looser security-wise (enumeration), but better UX for this specific case
+		// Actually, let's just stick to the specific "expired" check below if we found the row.
+		// If we didn't find the row, we can't do much.
 		return c.Status(404).JSON(fiber.Map{"error": "Invalid or expired verification token"})
 	}
 	if err != nil {
@@ -166,7 +170,10 @@ func HandleVerifyEmail(c *fiber.Ctx) error {
 
 	// Check if token expired
 	if time.Now().After(tokenExpiry) {
-		return c.Status(400).JSON(fiber.Map{"error": "Verification token has expired"})
+		return c.Status(400).JSON(fiber.Map{
+			"error": "Verification token has expired",
+			"email": email,
+		})
 	}
 
 	// Update user as verified
@@ -279,7 +286,10 @@ func HandleLogin(c *fiber.Ctx) error {
 
 	// Check if email is verified
 	if !user.EmailVerified {
-		return c.Status(403).JSON(fiber.Map{"error": "Please verify your email before logging in"})
+		return c.Status(403).JSON(fiber.Map{
+			"error":   "unverified_email",
+			"message": "Please verify your email before logging in",
+		})
 	}
 
 	// Verify password

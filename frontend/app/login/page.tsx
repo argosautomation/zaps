@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AuthLayout from '@/components/AuthLayout'
+import ResendVerificationButton from '@/components/ResendVerificationButton'
 
 export default function LoginPage() {
     const router = useRouter()
@@ -32,6 +33,12 @@ export default function LoginPage() {
 
             if (response.status === 403 && data.error === 'mfa_required') {
                 setStep('2fa')
+                setLoading(false)
+                return
+            }
+
+            if (response.status === 403 && data.error === 'unverified_email') {
+                setError(data.message || 'Please verify your email')
                 setLoading(false)
                 return
             }
@@ -70,11 +77,16 @@ export default function LoginPage() {
 
             <form className="space-y-6" onSubmit={handleSubmit}>
                 {error && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex items-center gap-2">
-                        <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {error}
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {error}
+                        </div>
+                        {error.includes('verify your email') && (
+                            <ResendVerificationButton email={formData.email} className="self-start pl-6" />
+                        )}
                     </div>
                 )}
 
