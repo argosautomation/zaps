@@ -573,6 +573,16 @@ func LoginWithProvider(c *fiber.Ctx, email, provider, providerID, picture string
 
 // HandleGoogleCallback handles the callback from Google
 func HandleGoogleCallback(c *fiber.Ctx) error {
+	// Check for error from provider (e.g. user denied access)
+	if errParam := c.Query("error"); errParam != "" {
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:3001"
+		}
+		// Redirect to login with error
+		return c.Redirect(frontendURL+"/login?error=oauth_cancelled", 302)
+	}
+
 	code := c.Query("code")
 	if code == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Code not found"})
@@ -604,6 +614,16 @@ func HandleGoogleCallback(c *fiber.Ctx) error {
 
 // HandleGitHubCallback handles the callback from GitHub
 func HandleGitHubCallback(c *fiber.Ctx) error {
+	// Check for error from provider (e.g. user denied access)
+	if errParam := c.Query("error"); errParam != "" {
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:3001"
+		}
+		// Redirect to login with error
+		return c.Redirect(frontendURL+"/login?error=oauth_cancelled", 302)
+	}
+
 	code := c.Query("code")
 	if code == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Code not found"})
