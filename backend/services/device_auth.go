@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+	"zaps/db"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -125,7 +126,15 @@ func PollToken(rdb *redis.Client, deviceCode string) (*DeviceTokenResponse, erro
 	}
 
 	if state.Status == "approved" {
-		// 2. Generate actual API Key for the IDE
+		// 2. Resolve Tenant ID from User ID (OwnerID)
+		// API Keys must be owned by the Tenant for Quota checks to work
+		var tenantID string
+		err := db.DB.QueryRow("SELECT tenant_id FROM users WHERE id = $1", state.OwnerID).Scan(&tenantID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve tenant: %v", err)
+		}
+
+		// 3. Generate actual API Key for the IDE
 		// We create a permanent key now
 		newKey, err := GenerateAPIKey()
 		if err != nil {
@@ -138,7 +147,7 @@ func PollToken(rdb *redis.Client, deviceCode string) (*DeviceTokenResponse, erro
 			Description: "Generated via Zaps Connect",
 			CreatedAt:   time.Now(),
 			Enabled:     true,
-			OwnerID:     state.OwnerID, // Link to the user who approved it
+			OwnerID:     tenantID, // MUST be TenantID for AuthMiddleware/CheckQuota
 			RateLimit:   1000,
 		}
 
