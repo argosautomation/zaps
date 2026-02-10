@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"log"
 
 	"zaps/db"
@@ -29,10 +30,17 @@ func LogAuditAsync(tenantID string, userID *string, eventType string, eventData 
 		// In Go, db.JSONBMap is map[string]interface{}
 		// We ensure eventData is safe
 
+		// Marshal eventData to JSON
+		jsonData, err := json.Marshal(eventData)
+		if err != nil {
+			log.Printf("❌ Failed to marshal audit log data: %v", err)
+			return
+		}
+
 		_, err = db.DB.Exec(`
-			INSERT INTO audit_logs (tenant_id, user_id, event_type, event_data, ip_address, user_agent, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, NOW())
-		`, tID, uID, eventType, eventData, ip, userAgent)
+			INSERT INTO audit_logs (tenant_id, user_id, event_type, event_data, ip_address, user_agent)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, tID, uID, eventType, jsonData, ip, userAgent)
 
 		if err != nil {
 			log.Printf("❌ Saved Audit Log Failed: %v", err)

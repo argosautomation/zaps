@@ -16,7 +16,7 @@ const SyntaxHighlight = ({ code }: { code: string | null }) => {
         const tokens = code.split(/(".*?"|[:{},[\]]|\btrue\b|\bfalse\b|\bnull\b|-?\d+(?:\.\d+)?)/g).filter(Boolean);
 
         return (
-            <code className="font-mono text-xs md:text-sm leading-relaxed">
+            <code className="font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap break-words block">
                 {tokens.map((token, i) => {
                     if (token.includes('<SECRET:')) {
                         return <span key={i} className="text-emerald-400 font-bold bg-emerald-400/10 px-1 rounded mx-0.5">{token}</span>
@@ -49,7 +49,7 @@ export default function RedactionVisualizer({ original, redacted, response, isLo
                     Input Prompt
                 </div>
                 <div className="bg-[#0B1120] rounded-xl p-5 border border-slate-800 flex-1 overflow-auto shadow-inner group-hover:border-slate-700 transition-colors">
-                    <pre className="whitespace-pre-wrap text-slate-300 text-sm">{original || '// Enter your prompt below...'}</pre>
+                    <pre className="whitespace-pre-wrap break-words text-slate-300 text-sm">{original || '// Enter your prompt below...'}</pre>
                 </div>
             </div>
 
@@ -88,7 +88,7 @@ export default function RedactionVisualizer({ original, redacted, response, isLo
                             Waiting for model...
                         </div>
                     ) : (
-                        <pre className="whitespace-pre-wrap text-slate-300 text-sm leading-relaxed">{response || '// Response will appear here'}</pre>
+                        <pre className="whitespace-pre-wrap break-words text-slate-300 text-sm leading-relaxed">{response || '// Response will appear here'}</pre>
                     )}
                 </div>
             </div>

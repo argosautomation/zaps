@@ -10,24 +10,21 @@ import {
     ResponsiveContainer
 } from 'recharts';
 
-const data = [
-    { name: '00:00', requests: 400 },
-    { name: '04:00', requests: 300 },
-    { name: '08:00', requests: 1200 },
-    { name: '12:00', requests: 2400 },
-    { name: '16:00', requests: 1800 },
-    { name: '20:00', requests: 1400 },
-    { name: '24:00', requests: 900 },
-];
+interface UsageChartProps {
+    data: { name: string; requests: number }[];
+}
 
-export default function UsageChart() {
+export default function UsageChart({ data }: UsageChartProps) {
+    // Fallback for empty state or loading (though parent should handle loading)
+    const chartData = data && data.length > 0 ? data : [];
+
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 h-96">
             <h3 className="text-base font-semibold leading-6 text-white mb-6">Request Volume (24h)</h3>
             <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                        data={data}
+                        data={chartData}
                         margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
                         <defs>

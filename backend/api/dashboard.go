@@ -38,7 +38,6 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	db.DB.QueryRow("SELECT COUNT(*) FROM api_keys WHERE tenant_id = $1 AND enabled = true", tenantID).Scan(&activeKeys)
 
 	// Mock PII redacted count (since we store it in JSONB, simpler query for now)
-	// In production, you'd extract this from the JSONB pii_events
 	var piiRedacted int64
 	db.DB.QueryRow(`
 		SELECT COALESCE(SUM((pii_events->>'redacted_count')::int), 0)
@@ -46,10 +45,45 @@ func GetDashboardStats(c *fiber.Ctx) error {
 		WHERE tenant_id = $1 AND hour_bucket >= $2
 	`, tenantID, today).Scan(&piiRedacted)
 
+	// Get 24h usage history
+	rows, err := db.DB.Query(`
+		SELECT hour_bucket, SUM(request_count)
+		FROM usage_logs
+		WHERE tenant_id = $1 AND hour_bucket >= NOW() - INTERVAL '24 hours'
+		GROUP BY hour_bucket
+		ORDER BY hour_bucket ASC
+	`, tenantID)
+
+	usageMap := make(map[string]int64)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var t time.Time
+			var count int64
+			if err := rows.Scan(&t, &count); err == nil {
+				// Format as HH:00
+				usageMap[t.Format("15:00")] = count
+			}
+		}
+	}
+
+	// Build 24h array (filling gaps)
+	var usageHistory []fiber.Map
+	now := time.Now().Truncate(time.Hour)
+	for i := 23; i >= 0; i-- {
+		t := now.Add(-time.Duration(i) * time.Hour)
+		key := t.Format("15:00")
+		usageHistory = append(usageHistory, fiber.Map{
+			"name":     key,
+			"requests": usageMap[key], // 0 if missing
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"requests_today": requestsToday,
 		"active_keys":    activeKeys,
 		"pii_redacted":   piiRedacted,
+		"usage_history":  usageHistory,
 	})
 }
 

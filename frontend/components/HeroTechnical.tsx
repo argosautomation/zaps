@@ -100,7 +100,7 @@ export default function HeroTechnical() {
                     </Link>
 
                     <Link
-                        href="https://github.com/zapsai/zaps-gateway"
+                        href="https://github.com/argosautomation/zaps"
                         className="px-8 py-4 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 rounded-full font-semibold transition-all hover:bg-slate-800/50 flex items-center gap-2"
                     >
                         <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">

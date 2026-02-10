@@ -22,7 +22,12 @@ var ProviderModels = map[string][]string{
 	"openai":    {"gpt-4-turbo", "gpt-3.5-turbo"},
 	"anthropic": {"claude-3-opus", "claude-3-sonnet"},
 	"deepseek":  {"deepseek-chat", "deepseek-coder"},
-	"gemini":    {"gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro"},
+	"gemini": {
+		"gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro",
+		"models/gemini-pro", "models/gemini-1.5-flash", "models/gemini-1.5-pro",
+		"gemini-1.5-flash-latest", "gemini-1.5-pro-latest",
+		"models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest",
+	},
 }
 
 const (
@@ -222,10 +227,14 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		// ASYNC AUDIT LOGGING & USAGE TRACKING
 		latency := time.Since(startTime)
 
-		// Increment Usage if successful
+		// Increment Usage if successful (Total Tenant Usage)
 		if resp.StatusCode == 200 {
 			go IncrementUsage(tenantID)
 		}
+
+		// Log Hourly Usage Stats (Async)
+		isError := resp.StatusCode >= 400
+		services.LogRequestUsage(tenantID, latency.Milliseconds(), isError, 0) // Tokens 0 for now
 
 		// Create sanitized event data
 		eventData := map[string]interface{}{

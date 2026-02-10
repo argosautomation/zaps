@@ -1,6 +1,45 @@
-import Link from 'next/link'
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
 
 export default function Pricing() {
+    const [loading, setLoading] = useState<string | null>(null);
+
+    const handleUpgrade = async (priceId: string) => {
+        if (!priceId) return;
+        setLoading(priceId);
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            const res = await fetch('/api/billing/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ priceID: priceId })
+            });
+
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert('Failed to start checkout');
+                setLoading(null);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error connecting to billing service');
+            setLoading(null);
+        }
+    };
+
     const plans = [
         {
             name: 'Free',
@@ -14,9 +53,10 @@ export default function Pricing() {
                 'Basic analytics',
                 'Community access'
             ],
-            cta: 'Start Free',
-            href: '/signup',
+            cta: 'Current Plan',
+            href: '/dashboard',
             highlighted: false,
+            priceId: '' // Free has no price ID
         },
         {
             name: 'Starter',
@@ -31,8 +71,9 @@ export default function Pricing() {
                 '7-day Audit Log Retention'
             ],
             cta: 'Start Free Trial',
-            href: '/signup', // Retaining original structure
-            highlighted: true, // Retaining original structure, assuming 'popular' maps to 'highlighted'
+            href: '',
+            highlighted: true,
+            priceId: 'price_1Sz0JDGhDW3wG5p3zxqu5MYH' // Live Starter Price
         },
         {
             name: 'Pro',
@@ -42,15 +83,16 @@ export default function Pricing() {
             features: [
                 '250,000 requests/mo',
                 'Everything in Starter',
-                'Secure PII Rehydration', // Added as per instruction
+                'Secure PII Rehydration',
                 'SSO & SAML (Coming Soon)',
                 'Team Collaboration Seats',
                 '30-day Audit Log Retention',
                 'Priority Support'
             ],
             cta: 'Start Pro Trial',
-            href: '/signup', // Retaining original structure
-            highlighted: false, // Retaining original structure, assuming 'popular' maps to 'highlighted'
+            href: '',
+            highlighted: false,
+            priceId: 'price_1Sz0EDGhDW3wG5p3k3zoXEYK' // Live Pro Price
         },
         {
             name: 'Enterprise',
@@ -66,8 +108,9 @@ export default function Pricing() {
                 '99.99% Uptime Guarantee'
             ],
             cta: 'Contact Sales',
-            href: 'mailto:sales@zaps.ai', // Retaining original structure
-            highlighted: false, // Retaining original structure, assuming 'popular' maps to 'highlighted'
+            href: 'mailto:sales@zaps.ai',
+            highlighted: false,
+            priceId: ''
         },
     ]
 
@@ -88,6 +131,7 @@ export default function Pricing() {
 
                 {/* Pricing Grid */}
                 <div style={{
+                    display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                     gap: '32px',
                     alignItems: 'stretch'
@@ -171,25 +215,49 @@ export default function Pricing() {
                             </ul>
 
                             {/* CTA Button moved to bottom */}
-                            <Link
-                                href={plan.href}
-                                style={{
-                                    display: 'block',
-                                    width: '100%',
-                                    textAlign: 'center',
-                                    padding: '12px',
-                                    borderRadius: '12px',
-                                    fontWeight: '600',
-                                    marginTop: 'auto',
-                                    textDecoration: 'none',
-                                    transition: 'all 0.3s ease',
-                                    background: plan.highlighted ? 'linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%)' : 'rgba(255, 255, 255, 0.05)',
-                                    color: plan.highlighted ? '#0F172A' : '#fff',
-                                    border: plan.highlighted ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
-                                }}
-                            >
-                                {plan.cta}
-                            </Link>
+                            {plan.priceId ? (
+                                <button
+                                    onClick={() => handleUpgrade(plan.priceId)}
+                                    disabled={loading === plan.priceId}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'center',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        fontWeight: '600',
+                                        marginTop: 'auto',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        background: plan.highlighted ? 'linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%)' : 'rgba(255, 255, 255, 0.05)',
+                                        color: plan.highlighted ? '#0F172A' : '#fff',
+                                        border: plan.highlighted ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                                        opacity: loading === plan.priceId ? 0.7 : 1
+                                    }}
+                                >
+                                    {loading === plan.priceId ? 'Processing...' : plan.cta}
+                                </button>
+                            ) : (
+                                <Link
+                                    href={plan.href}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        textAlign: 'center',
+                                        padding: '12px',
+                                        borderRadius: '12px',
+                                        fontWeight: '600',
+                                        marginTop: 'auto',
+                                        textDecoration: 'none',
+                                        transition: 'all 0.3s ease',
+                                        background: plan.highlighted ? 'linear-gradient(135deg, #0EA5E9 0%, #06B6D4 100%)' : 'rgba(255, 255, 255, 0.05)',
+                                        color: plan.highlighted ? '#0F172A' : '#fff',
+                                        border: plan.highlighted ? 'none' : '1px solid rgba(255, 255, 255, 0.1)'
+                                    }}
+                                >
+                                    {plan.cta}
+                                </Link>
+                            )}
                         </div>
                     ))}
                 </div>

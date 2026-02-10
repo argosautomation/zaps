@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -13,6 +15,52 @@ import (
 // SimulateRedaction handles the playground demo requests
 func SimulateRedaction(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ip := c.IP()
+		ctx := c.Context()
+
+		// --- RATE LIMITING STRATEGY ---
+		// 1. Speed Limit: 5 requests / minute
+		// 2. Daily Cap: 30 requests / day
+		// 3. Tarpit: 10s delay if over limit
+
+		speedKey := fmt.Sprintf("rate:playground:speed:%s", ip)
+		dailyKey := fmt.Sprintf("rate:playground:daily:%s", ip)
+
+		// Check Daily Cap
+		dailyCount, _ := rdb.Get(ctx, dailyKey).Int()
+		if dailyCount >= 30 {
+			// TARPIT: Simulate slow load then fail
+			time.Sleep(10 * time.Second)
+			return c.Status(429).JSON(fiber.Map{
+				"error":   "Daily limit exceeded",
+				"message": "You have reached the free demo limit for today. Please contact sales for a full trial.",
+			})
+		}
+
+		// Check Speed Limit
+		speedCount, err := rdb.Incr(ctx, speedKey).Result()
+		if err != nil {
+			log.Printf("Redis error: %v", err) // Fail open if Redis down
+		} else {
+			if speedCount == 1 {
+				rdb.Expire(ctx, speedKey, 60*time.Second)
+			}
+			if speedCount > 5 {
+				return c.Status(429).JSON(fiber.Map{
+					"error":   "Too many requests",
+					"message": "Please slow down. Max 5 requests per minute.",
+				})
+			}
+		}
+
+		// Increment Daily Counter
+		rdb.Incr(ctx, dailyKey)
+		if dailyCount == 0 {
+			rdb.Expire(ctx, dailyKey, 24*time.Hour)
+		}
+
+		// --- END RATE LIMITING ---
+
 		var req struct {
 			Text string `json:"text"`
 		}
@@ -25,35 +73,21 @@ func SimulateRedaction(rdb *redis.Client) fiber.Handler {
 			return c.Status(400).JSON(fiber.Map{"error": "Text too long (max 5000 chars)"})
 		}
 
-		// Perform Redattion (using shared service)
-		// We pass nil for redisClient if we don't want to cache these fake tokens,
-		// but if we want rehydration to work, we might need to cache them temporarily?
-		// Actually, for the playground, we can return the secretMap directly to the frontend
-		// so the frontend can "rehydrate" it or we can rehydrate it server-side.
-		// Let's do server-side rehydration to match the real flow.
-		// We WILL pass rdb to allow caching, but maybe with a short TTL?
-		// The service uses 10 min TTL, which is fine.
-
-		// Context for Redis
-		ctx := c.Context()
-
-		// 1. Redact
+		// Perform Redaction
 		redactedText, secretMap := services.RedactSecrets(ctx, req.Text, "playground-sim", rdb)
 
-		// 2. Simulate Latency (10-30ms) to feel "real" but fast
+		// Simulate Latency (10-30ms) to feel "real" but fast
 		time.Sleep(time.Duration(10+rand.Intn(20)) * time.Millisecond)
 
-		// 3. Rehydrate (Simulating the response coming back)
-		// In a real flow, the LLM allows the tokens to pass through.
-		// Here, we just immediately rehydrate the *redacted* text to prove it works.
+		// Rehydrate
 		rehydratedText := services.RehydrateSecrets(ctx, redactedText, secretMap, rdb)
 
 		return c.JSON(fiber.Map{
 			"original":         req.Text,
 			"redacted":         redactedText,
 			"rehydrated":       rehydratedText,
-			"detected_secrets": services.SanitizeMap(secretMap), // Show what we found (masked)
-			"latency_ms":       12,                              // Fake "overhead" stat
+			"detected_secrets": services.SanitizeMap(secretMap),
+			"latency_ms":       12,
 		})
 	}
 }

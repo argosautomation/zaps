@@ -59,6 +59,7 @@ func main() {
 	// Initialize OAuth
 	services.InitOAuth()
 	services.InitGitHubOAuth()
+	services.InitStripe()
 
 	// Initialize Admin Dashboard (legacy system)
 	InitAdmin(rdb)
@@ -179,7 +180,7 @@ func main() {
 	// Protected Billing Routes
 	billing := apiGroup.Group("/billing", AuthMiddleware(rdb))
 	billing.Post("/checkout", api.HandleCreateCheckoutSession)
-	billing.Post("/portal", api.HandlePortalSession)
+	billing.Post("/portal", api.HandleCreatePortalSession)
 
 	// Super Admin Routes
 	admin := apiGroup.Group("/admin", AuthMiddleware(rdb), api.SuperAdminMiddleware())

@@ -73,7 +73,7 @@ export default function DashboardOverview() {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                 {/* Usage Chart (Spans 2 columns) */}
                 <div className="lg:col-span-2">
-                    <UsageChart />
+                    <UsageChart data={stats?.usage_history || []} />
                 </div>
 
                 {/* Recent Audit Log (Spans 1 column, but simplified view) */}

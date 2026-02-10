@@ -1,26 +1,75 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CreditCard, Zap, CheckCircle2, TrendingUp } from 'lucide-react';
+import { CreditCard, Zap, CheckCircle2, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 interface BillingStats {
     monthly_usage: number;
     monthly_quota: number;
-    plan_name?: string;
+    subscription_tier?: string;
 }
 
 export default function BillingPage() {
     const [stats, setStats] = useState<BillingStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        fetch('/api/dashboard/stats')
+        fetch('/api/dashboard/stats', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
             .then(res => res.json())
             .then(data => setStats(data))
             .catch(console.error)
             .finally(() => setLoading(false));
     }, []);
+
+    const handleCheckout = async (priceId: string) => {
+        setActionLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/billing/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ priceID: priceId })
+            });
+            const data = await res.json();
+            if (data.url) window.location.href = data.url;
+            else alert('Failed to start checkout');
+        } catch (e) {
+            console.error(e);
+            alert('Error starting checkout');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handlePortal = async () => {
+        setActionLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/billing/portal', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await res.json();
+            if (data.url) window.location.href = data.url;
+            else alert('Failed to open portal');
+        } catch (e) {
+            console.error(e);
+            alert('Error opening portal');
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     if (loading) return <div className="text-slate-400 p-8">Loading billing info...</div>;
 
@@ -28,10 +77,21 @@ export default function BillingPage() {
     const quota = stats?.monthly_quota || 1000;
     const percentage = Math.min((usage / quota) * 100, 100);
 
-    // Infer plan from quota for now (since we don't have distinct plan column yet)
+    // Infer plan from quota/tier
     let planName = 'Free Plan';
-    if (quota >= 1000000) planName = 'Enterprise';
-    else if (quota >= 50000) planName = 'Pro Plan';
+    let isPro = false;
+
+    // Check explicit tier first, then fallback to quota
+    if (stats?.subscription_tier === 'enterprise' || quota >= 1000000) {
+        planName = 'Enterprise';
+        isPro = true;
+    } else if (stats?.subscription_tier === 'pro' || quota >= 50000) {
+        planName = 'Pro Plan';
+        isPro = true;
+    }
+
+    // TODO: move to env
+    const PRO_PRICE_ID = 'price_1SyzAyK5nJVngABgxpWmk8Xy';
 
     return (
         <div className="space-y-8 max-w-4xl">
@@ -42,8 +102,8 @@ export default function BillingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Current Plan Card */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 relative z-10">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-cyan-950/50 rounded-lg border border-cyan-900/50">
                                 <CreditCard className="w-6 h-6 text-cyan-400" />
@@ -53,21 +113,35 @@ export default function BillingPage() {
                                 <div className="text-cyan-400 text-sm font-semibold">{planName}</div>
                             </div>
                         </div>
-                        {planName === 'Free Plan' && (
-                            <button disabled className="px-4 py-2 bg-slate-800 text-slate-500 text-sm font-medium rounded-lg cursor-not-allowed border border-slate-700">
-                                Upgrade Coming Soon
+
+                        {isPro ? (
+                            <button
+                                onClick={handlePortal}
+                                disabled={actionLoading}
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg border border-slate-700 transition-colors flex items-center gap-2"
+                            >
+                                {actionLoading ? 'Loading...' : 'Manage'}
+                                <ExternalLink className="w-3 h-3" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleCheckout(PRO_PRICE_ID)}
+                                disabled={actionLoading}
+                                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-cyan-900/20"
+                            >
+                                {actionLoading ? 'Processing...' : 'Upgrade to Pro'}
                             </button>
                         )}
                     </div>
 
-                    <div className="space-y-3 pt-4 border-t border-slate-800/50">
+                    <div className="space-y-3 pt-4 border-t border-slate-800/50 relative z-10">
                         <div className="flex items-center gap-2 text-sm text-slate-400">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                             <span>Active Subscription</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-400">
                             <TrendingUp className="w-4 h-4 text-blue-500" />
-                            <span>Next billing date: 1st of next month</span>
+                            <span>Next billing date: {isPro ? 'Auto-renew' : 'N/A'}</span>
                         </div>
                     </div>
                 </div>

@@ -8,6 +8,7 @@ import (
 	portalsession "github.com/stripe/stripe-go/v76/billingportal/session"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/customer"
+	"github.com/stripe/stripe-go/v76/subscription"
 )
 
 func InitStripe() {
@@ -70,4 +71,9 @@ func GeneratePortalLink(customerID, returnURL string) (string, error) {
 		return "", err
 	}
 	return s.URL, nil
+}
+
+// GetStripeSubscription fetches subscription details
+func GetStripeSubscription(subID string) (*stripe.Subscription, error) {
+	return subscription.Get(subID, nil)
 }
