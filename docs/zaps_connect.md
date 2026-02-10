@@ -51,12 +51,23 @@ curl -v -k -x http://localhost:8888 https://api.deepseek.com/chat/completions \
   }'
 ```
 
-### 5. Use System-Wide
+### 4. Use System-Wide (Optional)
 To force terminal tools to use it:
 ```bash
 export HTTP_PROXY=http://localhost:8888
 export HTTPS_PROXY=http://localhost:8888
 ```
+
+## Safety: How to Stop & "Uninstall"
+If you lose internet access or want to stop using Zaps:
+
+1. **Stop the Proxy**: Press `Ctrl+C` in the terminal running `zaps connect`.
+2. **Unset Proxy Variables** (If you set them):
+   ```bash
+   unset HTTP_PROXY
+   unset HTTPS_PROXY
+   ```
+3. **Verify**: Run `curl https://google.com` to ensure your connection is back to normal.
 
 ## Code Structure
 - `cli/main.go`: CLI entry point and `login` command.
