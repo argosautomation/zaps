@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -599,7 +600,7 @@ func LoginWithProvider(c *fiber.Ctx, email, provider, providerID, picture string
 			query := fmt.Sprintf("UPDATE users SET %s = $1, avatar_url = $2, email_verified = TRUE WHERE id = $3", providerColumn)
 			_, err = db.DB.Exec(query, providerID, picture, user.ID)
 			if err != nil {
-				fmt.Println("Failed to link provider ID:", err)
+				log.Printf("Failed to link provider ID: %v\n", err)
 			}
 		}
 	}
