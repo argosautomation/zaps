@@ -75,9 +75,14 @@ export default function SignupPage() {
                     <p className="text-slate-400 mb-6">
                         We've sent a verification link to <strong className="text-cyan-400">{formData.email}</strong>
                     </p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 mb-8">
                         Click the link in the email to activate your account and start using Zaps.ai
                     </p>
+
+                    <div className="pt-6 border-t border-slate-800">
+                        <p className="text-sm text-slate-400 mb-3">Didn't receive the email?</p>
+                        <ResendButton email={formData.email} />
+                    </div>
                 </div>
             </AuthLayout>
         )
@@ -232,5 +237,62 @@ export default function SignupPage() {
                 </p>
             </form>
         </AuthLayout>
+    )
+}
+
+function ResendButton({ email }: { email: string }) {
+    const [loading, setLoading] = useState(false)
+    const [cooldown, setCooldown] = useState(0)
+    const [message, setMessage] = useState('')
+
+    useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setInterval(() => setCooldown(c => c - 1), 1000)
+            return () => clearInterval(timer)
+        }
+    }, [cooldown])
+
+    const handleResend = async () => {
+        setLoading(true)
+        setMessage('')
+        try {
+            const res = await fetch('/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Failed to send email')
+            setMessage('Email sent!')
+            setCooldown(60)
+        } catch (err: any) {
+            setMessage(err.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (cooldown > 0) {
+        return (
+            <div className="flex flex-col items-center gap-2">
+                <button disabled className="text-slate-500 cursor-not-allowed font-medium text-sm">
+                    Resend email in {cooldown}s
+                </button>
+                {message && <p className="text-green-400 text-xs">{message}</p>}
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <button
+                onClick={handleResend}
+                disabled={loading}
+                className="text-cyan-400 hover:text-cyan-300 font-medium text-sm transition-colors disabled:opacity-50"
+            >
+                {loading ? 'Sending...' : 'Click to resend'}
+            </button>
+            {message && <p className="text-red-400 text-xs">{message}</p>}
+        </div>
     )
 }

@@ -129,6 +129,7 @@ func main() {
 
 	authGroup := app.Group("/auth")
 	authGroup.Post("/register", api.HandleRegister)
+	authGroup.Post("/resend-verification", api.HandleResendVerification)
 	authGroup.Get("/verify", api.HandleVerifyEmail)
 	authGroup.Post("/login", api.HandleLogin)
 	authGroup.Post("/logout", api.HandleLogout)

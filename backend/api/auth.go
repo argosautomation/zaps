@@ -188,6 +188,54 @@ func HandleVerifyEmail(c *fiber.Ctx) error {
 	})
 }
 
+// HandleResendVerification resends the verification email
+func HandleResendVerification(c *fiber.Ctx) error {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	// Find user
+	var userID uuid.UUID
+	var isVerified bool
+	err := db.DB.QueryRow("SELECT id, email_verified FROM users WHERE email = $1", req.Email).Scan(&userID, &isVerified)
+
+	if err == sql.ErrNoRows {
+		// Silent success to prevent enumeration
+		time.Sleep(randomDuration(100, 300))
+		return c.JSON(fiber.Map{"message": "If an account exists, a new verification email has been sent."})
+	}
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+	}
+
+	if isVerified {
+		return c.Status(400).JSON(fiber.Map{"error": "Email is already verified"})
+	}
+
+	// Generate new token
+	token, _ := generateSecureToken(32)
+	tokenExpiry := time.Now().Add(24 * time.Hour)
+
+	_, err = db.DB.Exec(`
+		UPDATE users 
+		SET verification_token = $1, verification_token_expires_at = $2 
+		WHERE id = $3
+	`, token, tokenExpiry, userID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to update verification token"})
+	}
+
+	// Send email
+	go services.SendVerificationEmail(req.Email, token)
+
+	return c.JSON(fiber.Map{"message": "Verification email sent associated with this address."})
+}
+
 // HandleLogin authenticates a user and returns a session token
 func HandleLogin(c *fiber.Ctx) error {
 	var req LoginRequest
