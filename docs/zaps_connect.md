@@ -7,7 +7,7 @@
 Zaps Connect is a lightweight local proxy CLI written in Go. It intercepts traffic on your local machine destined for known LLM providers (e.g., DeepSeek) and transparently routes it through the Zaps.ai Gateway for governance, redaction, and logging.
 
 ## Current Capabilities
-- **Login**: Securely saves your Zaps API Key to `~/.zaps/credentials`.
+- **Login**: Securely authenticates via **Device Flow** (RFC 8628) and saves credential to `~/.zaps/credentials`.
 - **Proxy**: Runs a local HTTP CONNECT tunnel on port `:8888`.
 - **Interception**:
     - Targets: `api.deepseek.com`
@@ -23,11 +23,15 @@ cd cli
 go build -o zaps .
 ```
 
-### 2. Login
+### 2. Login (Device Flow)
 ```bash
 ./zaps login
-# Enter your API Key when prompted
+# Output:
+# Authenticate your device:
+# 1. Visit: https://zaps.ai/activate
+# 2. Enter Code: ABCD-1234
 ```
+Follow the instructions to authorize the device in your browser. The CLI will automatically save your API Key to `~/.zaps/credentials` upon approval.
 
 ### 3. Start Proxy
 ```bash
@@ -59,6 +63,7 @@ export HTTPS_PROXY=http://localhost:8888
 - `cli/proxy.go`: Core `goproxy` implementation and interception logic.
 
 ## Roadmap (To Do)
+- [x] **Device Flow**: Implemented RFC 8628 for secure login.
 - [ ] **Binary Build**: Create cross-platform builds (Mac/Linux/Windows).
 - [ ] **System Cert**: Automate Root CA installation for transparent SSL handling (no `-k` needed).
 - [ ] **Tray App**: Wrap CLI in a lightweight menu bar app.

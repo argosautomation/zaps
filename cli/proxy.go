@@ -3,13 +3,20 @@ package main
 import (
 	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/elazarl/goproxy"
 )
 
-func startProxy(apiKey string) {
+func startProxy(apiKey string, targetURL string) {
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.Verbose = true
+
+	// Parse Target URL
+	target, err := url.Parse(targetURL)
+	if err != nil {
+		log.Fatal("Invalid Target URL:", err)
+	}
 
 	// Standard MITM for HTTPS (Note: This will cause certificate warnings in browsers/curl without -k)
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
@@ -19,10 +26,10 @@ func startProxy(apiKey string) {
 		func(r *http.Request, ctx *goproxy.ProxyCtx) (*http.Request, *http.Response) {
 			log.Printf("🛡️  Zaps Intercept: %s%s", r.Host, r.URL.Path)
 
-			// Rewrite Target to Zaps.ai
-			r.URL.Scheme = "https"
-			r.URL.Host = "zaps.ai"
-			r.Host = "zaps.ai" // Critical for SNI and Host header
+			// Rewrite Target to Zaps Gateway
+			r.URL.Scheme = target.Scheme
+			r.URL.Host = target.Host
+			r.Host = target.Host // Critical for SNI and Host header
 
 			// Adjust Path for OpenAI compatibility
 			// DeepSeek: /chat/completions -> Zaps: /v1/chat/completions
@@ -35,7 +42,7 @@ func startProxy(apiKey string) {
 			r.Header.Set("Authorization", "Bearer "+apiKey)
 			r.Header.Del("Accept-Encoding") // Prevent compression issues during debugging
 
-			log.Printf("➡️  Redirecting to: https://zaps.ai%s", r.URL.Path)
+			log.Printf("➡️  Redirecting to: %s%s", targetURL, r.URL.Path)
 
 			return r, nil
 		})
