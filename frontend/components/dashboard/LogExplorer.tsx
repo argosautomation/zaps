@@ -15,18 +15,10 @@ import {
 import LogDetailViewer from './LogDetailViewer';
 
 // Fetcher helper
-const fetcher = (url: string) => fetch(url, {
-    credentials: 'include'
-}).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-function getCookie(name: string) {
-    // Helper kept for other uses if needed, but not used for auth headers anymore
-    if (typeof document === 'undefined') return '';
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift();
-    return '';
-}
+// Helper not needed for HttpOnly cookies
+// function getCookie...
 
 interface AuditLog {
     id: number;

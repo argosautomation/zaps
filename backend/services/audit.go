@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"log"
+	"strings"
 
 	"zaps/db"
 
@@ -11,6 +12,10 @@ import (
 
 // LogAuditAsync inserts an audit log entry asynchronously
 func LogAuditAsync(tenantID string, userID *string, eventType string, eventData map[string]interface{}, ip string, userAgent string) {
+	// Sanitize IP (handle X-Forwarded-For multiple IPs)
+	if strings.Contains(ip, ",") {
+		ip = strings.TrimSpace(strings.Split(ip, ",")[0])
+	}
 	go func() {
 		// Parse UUIDs
 		tID, err := uuid.Parse(tenantID)

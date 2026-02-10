@@ -7,7 +7,7 @@ import ConfirmModal from './ConfirmModal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-// Helper not needed
+// Helper not needed for HttpOnly cookies
 // function getCookie...
 
 interface APIKey {

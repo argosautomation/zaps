@@ -1,0 +1,64 @@
+# Zaps Connect (Prototype) Documentation
+
+**Status: Functional Prototype (Dev Mode)**
+**Date: Feb 10, 2026**
+
+## Overview
+Zaps Connect is a lightweight local proxy CLI written in Go. It intercepts traffic on your local machine destined for known LLM providers (e.g., DeepSeek) and transparently routes it through the Zaps.ai Gateway for governance, redaction, and logging.
+
+## Current Capabilities
+- **Login**: Securely saves your Zaps API Key to `~/.zaps/credentials`.
+- **Proxy**: Runs a local HTTP CONNECT tunnel on port `:8888`.
+- **Interception**:
+    - Targets: `api.deepseek.com`
+    - Action: Rewrites destination to `zaps.ai`.
+    - Auth Injection: Automatically adds `Authorization: Bearer gk_...` header.
+
+## How to Run (Source)
+Since this is currently a prototype, you run it directly from the Go source code.
+
+### 1. Build/Run
+```bash
+cd cli
+go build -o zaps .
+```
+
+### 2. Login
+```bash
+./zaps login
+# Enter your API Key when prompted
+```
+
+### 3. Start Proxy
+```bash
+./zaps connect
+# Output: 🚀 Zaps Connect Proxy listening on :8888
+```
+
+### 4. Test (Manual)
+To verify it works, use `curl` with the proxy flag:
+
+```bash
+curl -v -k -x http://localhost:8888 https://api.deepseek.com/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-chat",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+### 5. Use System-Wide
+To force terminal tools to use it:
+```bash
+export HTTP_PROXY=http://localhost:8888
+export HTTPS_PROXY=http://localhost:8888
+```
+
+## Code Structure
+- `cli/main.go`: CLI entry point and `login` command.
+- `cli/proxy.go`: Core `goproxy` implementation and interception logic.
+
+## Roadmap (To Do)
+- [ ] **Binary Build**: Create cross-platform builds (Mac/Linux/Windows).
+- [ ] **System Cert**: Automate Root CA installation for transparent SSL handling (no `-k` needed).
+- [ ] **Tray App**: Wrap CLI in a lightweight menu bar app.

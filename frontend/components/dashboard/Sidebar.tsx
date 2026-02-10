@@ -28,16 +28,8 @@ const navigation = [
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
-// Fetcher helper
-const fetcher = (url: string) => fetch(url, { headers: { 'Authorization': 'Bearer ' + getCookie('session') } }).then((res) => res.json());
-
-function getCookie(name: string) {
-    if (typeof document === 'undefined') return '';
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift();
-    return '';
-}
+// Fetcher helper - Browser automatically handles HttpOnly cookies
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Sidebar() {
     const pathname = usePathname();

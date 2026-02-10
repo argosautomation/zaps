@@ -13,7 +13,8 @@ interface SnippetGeneratorProps {
 const providers = [
     { id: 'openai', name: 'OpenAI', model: 'gpt-4o' },
     { id: 'deepseek', name: 'DeepSeek', model: 'deepseek-chat' },
-    { id: 'anthropic', name: 'Anthropic', model: 'claude-3-5-sonnet' },
+    { id: 'anthropic-sonnet', name: 'Anthropic (Sonnet)', model: 'claude-3-5-sonnet' },
+    { id: 'anthropic-haiku', name: 'Anthropic (Haiku)', model: 'claude-3-haiku-20240307' },
     { id: 'gemini', name: 'Gemini', model: 'gemini-pro' },
 ] as const;
 
@@ -102,8 +103,8 @@ print(response.json())`;
                             key={p.id}
                             onClick={() => setProvider(p.id as Provider)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${provider === p.id
-                                    ? 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20'
-                                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                                ? 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                                 }`}
                         >
                             {p.name}
@@ -117,8 +118,8 @@ print(response.json())`;
                             key={l.id}
                             onClick={() => setLanguage(l.id as Language)}
                             className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-2 transition-all ${language === l.id
-                                    ? 'bg-slate-800 text-white shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-300'
+                                ? 'bg-slate-800 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-300'
                                 }`}
                         >
                             <l.icon size={14} />

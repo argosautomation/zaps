@@ -39,6 +39,7 @@ func AuthMiddleware(rdb *redis.Client) fiber.Handler {
 		}
 
 		// 2. Check Session Cookie (Dashboard Access)
+		// We prefer the HttpOnly 'session' cookie, but fallback to 'Authorization' header for API clients
 		sessionToken := c.Cookies("session")
 		if sessionToken != "" {
 			token, err := jwt.Parse(sessionToken, func(token *jwt.Token) (interface{}, error) {

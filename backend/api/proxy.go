@@ -20,7 +20,7 @@ import (
 
 var ProviderModels = map[string][]string{
 	"openai":    {"gpt-4-turbo", "gpt-3.5-turbo"},
-	"anthropic": {"claude-3-opus", "claude-3-sonnet"},
+	"anthropic": {"claude-3-opus", "claude-3-sonnet", "claude-3-5-sonnet", "claude-3-haiku-20240307"},
 	"deepseek":  {"deepseek-chat", "deepseek-coder"},
 	"gemini": {
 		"gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro",
@@ -157,10 +157,6 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		baseURL := GetProviderURL(provider)
 		targetURL := baseURL + "/chat/completions"
 
-		if provider == ProviderAnthropic {
-			return c.Status(400).JSON(fiber.Map{"error": "Anthropic requires /v1/messages endpoint. Auto-translation coming soon."})
-		}
-
 		// Track secrets for rehydration
 		secretMap := make(map[string]string)
 
@@ -196,15 +192,33 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		}
 
 		// Forward to Upstream
-		cleanBody, _ := json.Marshal(body)
+		var reqBodyBytes []byte
 
-		req, err := http.NewRequest("POST", targetURL, bytes.NewReader(cleanBody))
-		if err != nil {
+		if provider == "anthropic" {
+			// Convert OAI -> Anthropic
+			anthropicBody, convertErr := ConvertOpenAIToAnthropic(body)
+			if convertErr != nil {
+				return c.Status(400).JSON(fiber.Map{"error": "Failed to convert request for Anthropic"})
+			}
+			reqBodyBytes, _ = json.Marshal(anthropicBody)
+			targetURL = "https://api.anthropic.com/v1/messages" // Override URL
+		} else {
+			reqBodyBytes, _ = json.Marshal(body)
+		}
+
+		req, reqErr := http.NewRequest("POST", targetURL, bytes.NewReader(reqBodyBytes))
+		if reqErr != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to create request"})
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+
+		if provider == "anthropic" {
+			req.Header.Set("x-api-key", apiKey)
+			req.Header.Set("anthropic-version", "2023-06-01")
+		} else {
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+		}
 
 		// Increase timeout to 5 minutes
 		client := &http.Client{Timeout: 300 * time.Second}
@@ -219,6 +233,16 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to read response"})
+		}
+
+		// If Anthropic and Success, Convert back to OpenAI format
+		if provider == "anthropic" && resp.StatusCode == 200 {
+			convertedResp, err := ConvertAnthropicToOpenAI(responseBody)
+			if err == nil {
+				responseBody = convertedResp
+			} else {
+				log.Printf("Failed to convert Anthropic response: %v", err)
+			}
 		}
 
 		// Rehydrate secrets in response
@@ -244,7 +268,7 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 			"latency_ms":   latency.Milliseconds(),
 			"redacted":     len(secretMap) > 0,
 			"redact_count": len(secretMap),
-			"request_len":  len(cleanBody),
+			"request_len":  len(reqBodyBytes),
 			"response_len": len(responseBody),
 			// Store sanitized secrets for debugging (Masked)
 			"pii_details": services.SanitizeMap(secretMap),
@@ -254,7 +278,7 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 
 		// PLAYGROUND DEBUG SUPPORT
 		if c.Get("X-Zaps-Debug") == "true" {
-			c.Set("X-Zaps-Redacted-Content", string(cleanBody))
+			c.Set("X-Zaps-Redacted-Content", string(reqBodyBytes))
 		}
 
 		c.Set("Content-Type", "application/json")

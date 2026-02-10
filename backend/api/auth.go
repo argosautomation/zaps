@@ -299,18 +299,22 @@ func HandleLogin(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to generate token"})
 	}
 
-	// Set cookie
-	c.Cookie(&fiber.Cookie{
-		Name:     "session",
-		Value:    t,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: true,
-		Secure:   false, // Set to true in production
-		SameSite: "Lax",
-	})
+	// Set HttpOnly Cookie
+	cookie := new(fiber.Cookie)
+	cookie.Name = "session"
+	cookie.Value = t
+	cookie.Expires = time.Now().Add(24 * time.Hour)
+	cookie.HTTPOnly = true
+	cookie.Secure = false // TODO: Set to true in production based on env
+	if os.Getenv("GO_ENV") == "production" {
+		cookie.Secure = true
+	}
+	cookie.SameSite = "Lax"
+
+	c.Cookie(cookie)
 
 	return c.JSON(fiber.Map{
-		"token": t,
+		"message": "Logged in successfully",
 		"user": fiber.Map{
 			"id":    user.ID,
 			"email": user.Email,
@@ -535,6 +539,7 @@ func LoginWithProvider(c *fiber.Ctx, email, provider, providerID, picture string
 		"tenant_id": user.TenantID.String(),
 		"exp":       time.Now().Add(24 * time.Hour).Unix(),
 	}
+
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "default-secret-key-change-me"
@@ -545,14 +550,19 @@ func LoginWithProvider(c *fiber.Ctx, email, provider, providerID, picture string
 		return c.Status(500).SendString("Failed to generate token")
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     "session",
-		Value:    t,
-		Expires:  time.Now().Add(24 * time.Hour),
-		HTTPOnly: true,
-		Secure:   false,
-		SameSite: "Lax",
-	})
+	// Set HttpOnly Cookie
+	cookie := new(fiber.Cookie)
+	cookie.Name = "session"
+	cookie.Value = t
+	cookie.Expires = time.Now().Add(24 * time.Hour)
+	cookie.HTTPOnly = true
+	cookie.Secure = false // TODO: Set to true in production based on env
+	if os.Getenv("GO_ENV") == "production" {
+		cookie.Secure = true
+	}
+	cookie.SameSite = "Lax"
+
+	c.Cookie(cookie)
 
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
