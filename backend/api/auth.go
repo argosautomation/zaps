@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -435,64 +436,76 @@ func HandleRequestPasswordReset(c *fiber.Ctx) error {
 }
 
 // HandleResetPassword completes the password reset flow
-func HandleResetPassword(c *fiber.Ctx) error {
-	var req struct {
-		Token       string `json:"token"`
-		NewPassword string `json:"new_password"`
+func HandleResetPassword(rdb *redis.Client) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var req struct {
+			Token       string `json:"token"`
+			NewPassword string `json:"new_password"`
+		}
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+
+		if len(req.NewPassword) < 12 {
+			return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters"})
+		}
+
+		// Find user by token
+		var userID uuid.UUID
+		var expiresAt time.Time
+
+		err := db.DB.QueryRow(`
+			SELECT id, password_reset_expires_at 
+			FROM users 
+			WHERE password_reset_token = $1
+		`, req.Token).Scan(&userID, &expiresAt)
+
+		if err == sql.ErrNoRows {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
+		}
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Database error"})
+		}
+
+		// Check expiry
+		if time.Now().After(expiresAt) {
+			return c.Status(400).JSON(fiber.Map{"error": "Reset token has expired"})
+		}
+
+		// Hash new password
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), 14)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
+		}
+
+		// Update password and clear token
+		// Also clear locked status if any
+		_, err = db.DB.Exec(`
+			UPDATE users 
+			SET password_hash = $1, 
+			    password_reset_token = NULL, 
+			    password_reset_expires_at = NULL,
+			    failed_login_attempts = 0,
+			    locked_until = NULL
+			WHERE id = $2
+		`, string(hash), userID)
+
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to reset password"})
+		}
+
+		// Invalidate existing sessions
+		// Set a "min_iat" (minimum issued-at) timestamp for this user in Redis
+		// All tokens issued before this timestamp will be rejected by middleware
+		minIAT := time.Now().Unix()
+		err = rdb.Set(c.Context(), fmt.Sprintf("user:%s:min_iat", userID), minIAT, 24*time.Hour).Err()
+		if err != nil {
+			// Non-fatal, but log it
+			fmt.Printf("⚠️ Failed to set min_iat for user %s: %v\n", userID, err)
+		}
+
+		return c.JSON(fiber.Map{"message": "Password reset successfully. You can now log in."})
 	}
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
-	}
-
-	if len(req.NewPassword) < 12 {
-		return c.Status(400).JSON(fiber.Map{"error": "Password must be at least 12 characters"})
-	}
-
-	// Find user by token
-	var userID uuid.UUID
-	var expiresAt time.Time
-
-	err := db.DB.QueryRow(`
-		SELECT id, password_reset_expires_at 
-		FROM users 
-		WHERE password_reset_token = $1
-	`, req.Token).Scan(&userID, &expiresAt)
-
-	if err == sql.ErrNoRows {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid or expired reset token"})
-	}
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Database error"})
-	}
-
-	// Check expiry
-	if time.Now().After(expiresAt) {
-		return c.Status(400).JSON(fiber.Map{"error": "Reset token has expired"})
-	}
-
-	// Hash new password
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), 14)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
-	}
-
-	// Update password and clear token
-	// Also clear locked status if any
-	_, err = db.DB.Exec(`
-		UPDATE users 
-		SET password_hash = $1, 
-		    password_reset_token = NULL, 
-		    password_reset_expires_at = NULL,
-		    failed_login_attempts = 0,
-		    locked_until = NULL
-		WHERE id = $2
-	`, string(hash), userID)
-
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to reset password"})
-	}
-
-	return c.JSON(fiber.Map{"message": "Password reset successfully. You can now log in."})
 }
 
 // Helper to prevent timing attacks

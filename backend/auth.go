@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -55,7 +56,30 @@ func AuthMiddleware(rdb *redis.Client) fiber.Handler {
 
 			if err == nil && token.Valid {
 				if claims, ok := token.Claims.(jwt.MapClaims); ok {
-					c.Locals("user_id", claims["user_id"])
+					userID := claims["user_id"].(string)
+
+					// Check for session invalidation (min_iat)
+					minIATStr, err := rdb.Get(c.Context(), fmt.Sprintf("user:%s:min_iat", userID)).Result()
+					if err == nil {
+						// Key exists, check timestamp
+						var minIAT int64
+						fmt.Sscanf(minIATStr, "%d", &minIAT)
+
+						// Get token iat
+						var iat int64
+						switch v := claims["iat"].(type) {
+						case float64:
+							iat = int64(v)
+						case json.Number:
+							iat, _ = v.Int64()
+						}
+
+						if iat < minIAT {
+							return c.Status(401).JSON(fiber.Map{"error": "Session expired. Please log in again."})
+						}
+					}
+
+					c.Locals("user_id", userID)
 					c.Locals("tenant_id", claims["tenant_id"])
 					c.Locals("email", claims["email"])
 					// Support for Playground (which uses Session, but calls endpoints expecting owner_id)

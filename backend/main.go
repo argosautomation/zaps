@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/redis/go-redis/v9"
@@ -98,6 +99,9 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Security Headers
+	app.Use(helmet.New())
+
 	// ==============================================
 	// PUBLIC ROUTES
 	// ==============================================
@@ -161,7 +165,7 @@ func main() {
 	authGroup.Post("/login", loginLimiter, api.HandleLogin)
 	authGroup.Post("/logout", api.HandleLogout)
 	authGroup.Post("/password/forgot", strictLimiter, api.HandleRequestPasswordReset)
-	authGroup.Post("/password/reset", api.HandleResetPassword)
+	authGroup.Post("/password/reset", api.HandleResetPassword(rdb))
 
 	// Social Auth
 	authGroup.Get("/google/login", api.HandleGoogleLogin)
@@ -169,7 +173,7 @@ func main() {
 	authGroup.Get("/github/login", api.HandleGitHubLogin)
 	authGroup.Get("/github/callback", api.HandleGitHubCallback)
 	// Device Auth (RFC 8628)
-	authGroup.Post("/device/code", func(c *fiber.Ctx) error {
+	authGroup.Post("/device/code", loginLimiter, func(c *fiber.Ctx) error {
 		code, err := services.RequestDeviceCode(rdb)
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to generate device code"})
