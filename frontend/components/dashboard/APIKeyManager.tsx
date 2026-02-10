@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 import { Plus, Trash2, Copy, Check, Key } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -52,15 +53,23 @@ export default function APIKeyManager() {
         }
     };
 
-    const handleRevoke = async (id: string) => {
-        if (!confirm('Are you sure you want to revoke this key? This action cannot be undone.')) return;
+    const [keyToRevoke, setKeyToRevoke] = useState<string | null>(null);
+
+    const handleRevokeClick = (id: string) => {
+        setKeyToRevoke(id);
+    };
+
+    const confirmRevoke = async () => {
+        if (!keyToRevoke) return;
         try {
-            await fetch(`/api/dashboard/keys/${id}`, {
+            await fetch(`/api/dashboard/keys/${keyToRevoke}`, {
                 method: 'DELETE',
             });
             mutate('/api/dashboard/keys');
         } catch (err) {
             console.error(err);
+        } finally {
+            setKeyToRevoke(null);
         }
     };
 
@@ -75,7 +84,15 @@ export default function APIKeyManager() {
 
     return (
         <div className="space-y-6">
-            {/* Removed Redundant Header: Context is provided by page `h1`. */}
+            <ConfirmModal
+                isOpen={!!keyToRevoke}
+                onClose={() => setKeyToRevoke(null)}
+                onConfirm={confirmRevoke}
+                title="Revoke API Key?"
+                message="This action cannot be undone. Any applications using this key will immediately lose access to the API."
+                confirmText="Revoke Key"
+                isDanger={true}
+            />
 
             {/* Create Key Form (Simple Inline) */}
             <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
@@ -177,7 +194,7 @@ export default function APIKeyManager() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button
-                                            onClick={() => handleRevoke(key.id)}
+                                            onClick={() => handleRevokeClick(key.id)}
                                             className="text-red-400 hover:text-red-300 transition-colors opacity-0 group-hover:opacity-100"
                                         >
                                             <Trash2 size={18} />
