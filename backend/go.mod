@@ -10,8 +10,11 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.11.1
 	github.com/mailgun/mailgun-go/v4 v4.23.0
+	github.com/pquerna/otp v1.5.0
 	github.com/redis/go-redis/v9 v9.17.2
+	github.com/stripe/stripe-go/v76 v76.25.0
 	golang.org/x/crypto v0.47.0
+	golang.org/x/oauth2 v0.35.0
 )
 
 require (
@@ -29,12 +32,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pquerna/otp v1.5.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/stripe/stripe-go/v76 v76.25.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 )
