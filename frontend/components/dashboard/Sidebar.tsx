@@ -12,7 +12,8 @@ import {
     Zap,
     Terminal,
     CreditCard,
-    Shield
+    Shield,
+    Book
 } from 'lucide-react';
 
 const navigation = [
@@ -22,6 +23,7 @@ const navigation = [
     { name: 'API Keys', href: '/dashboard/keys', icon: Key },
     { name: 'Audit Logs', href: '/dashboard/logs', icon: ShieldAlert },
     { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
+    { name: 'Docs', href: '/dashboard/docs', icon: Book },
     { name: 'Admin', href: '/dashboard/admin', icon: Shield },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
