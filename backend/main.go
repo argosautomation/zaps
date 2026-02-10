@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/redis/go-redis/v9"
 
@@ -127,13 +129,38 @@ func main() {
 	// AUTHENTICATION ROUTES (New SaaS)
 	// ==============================================
 
+	// Rate Limiters
+	// Strict: 5 requests per hour (Verification, Password Reset, Register)
+	strictLimiter := limiter.New(limiter.Config{
+		Max:        5,
+		Expiration: 1 * time.Hour,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{"error": "Too many requests. Please try again later."})
+		},
+	})
+
+	// Login: 10 requests per minute (Brute force protection)
+	loginLimiter := limiter.New(limiter.Config{
+		Max:        10,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{"error": "Too many login attempts. Please try again in a minute."})
+		},
+	})
+
 	authGroup := app.Group("/auth")
-	authGroup.Post("/register", api.HandleRegister)
-	authGroup.Post("/resend-verification", api.HandleResendVerification)
+	authGroup.Post("/register", strictLimiter, api.HandleRegister)
+	authGroup.Post("/resend-verification", strictLimiter, api.HandleResendVerification)
 	authGroup.Get("/verify", api.HandleVerifyEmail)
-	authGroup.Post("/login", api.HandleLogin)
+	authGroup.Post("/login", loginLimiter, api.HandleLogin)
 	authGroup.Post("/logout", api.HandleLogout)
-	authGroup.Post("/password/forgot", api.HandleRequestPasswordReset)
+	authGroup.Post("/password/forgot", strictLimiter, api.HandleRequestPasswordReset)
 	authGroup.Post("/password/reset", api.HandleResetPassword)
 
 	// Social Auth
