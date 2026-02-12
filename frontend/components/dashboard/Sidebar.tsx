@@ -13,12 +13,14 @@ import {
     Terminal,
     CreditCard,
     Shield,
-    Book
+    Book,
+    SearchCode
 } from 'lucide-react';
 
 const navigation = [
     { name: 'Overview', href: '/dashboard', icon: BarChart3 },
     { name: 'Playground', href: '/dashboard/playground', icon: Terminal },
+    { name: 'Inspector', href: '/dashboard/inspector', icon: SearchCode },
     { name: 'Providers', href: '/dashboard/providers', icon: Zap },
     { name: 'API Keys', href: '/dashboard/keys', icon: Key },
     { name: 'Audit Logs', href: '/dashboard/logs', icon: ShieldAlert },

@@ -64,8 +64,8 @@ services:
         condition: service_healthy
     networks:
       - gateway-network
-    volumes:
-      - ./backend:/app
+    # volumes:
+    #   - ./backend:/app
     restart: unless-stopped
 
   # Frontend (Next.js)

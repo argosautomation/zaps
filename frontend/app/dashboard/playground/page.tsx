@@ -1,125 +1,149 @@
 'use client';
+
 import { useState } from 'react';
-import RedactionVisualizer from '@/components/dashboard/RedactionVisualizer';
-import { Send, Settings, Terminal } from 'lucide-react';
+import ChatInterface from '@/components/dashboard/playground/ChatInterface';
+import SystemEditor from '@/components/dashboard/playground/SystemEditor';
+import { Sidebar } from 'lucide-react';
 
 export default function PlaygroundPage() {
-    const [prompt, setPrompt] = useState('Write an email to user@example.com about their order #12345');
-    const [model, setModel] = useState('deepseek-chat');
+    const [messages, setMessages] = useState<any[]>([]);
+    const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
     const [isLoading, setIsLoading] = useState(false);
+    const [model, setModel] = useState('deepseek-chat');
 
-    // Debug Data
-    const [debugOriginal, setDebugOriginal] = useState('');
-    const [debugRedacted, setDebugRedacted] = useState<string | null>(null);
-    const [debugResponse, setDebugResponse] = useState<string | null>(null);
+    // UI State
+    const [showSystem, setShowSystem] = useState(true);
 
-    const handleSend = async () => {
+    // Debug / Inspector State
+
+
+    // Track which messages have redaction toggled ON
+    // Key = message index, Value = boolean (true = show redacted)
+    const [redactionStates, setRedactionStates] = useState<Record<number, boolean>>({});
+
+    const handleSendMessage = async (content: string) => {
+        const newMessage = { role: 'user', content };
+        setMessages(prev => [...prev, newMessage]);
         setIsLoading(true);
-        setDebugOriginal(prompt);
-        setDebugRedacted(null);
-        setDebugResponse(null);
+
+
+
 
         try {
+            const allMessages = [
+                { role: 'system', content: systemPrompt },
+                ...messages,
+                newMessage
+            ];
+
             const res = await fetch('/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Zaps-Debug': 'true' // Request Redacted Content
+                    'X-Zaps-Debug': 'true'
                 },
                 body: JSON.stringify({
                     model: model,
-                    messages: [{ role: 'user', content: prompt }]
+                    messages: allMessages
                 })
             });
 
-            // Extract Headers
+            // Handle Redaction Header
             const redactedContent = res.headers.get('X-Zaps-Redacted-Content');
+            let redactedBody = null;
             if (redactedContent) {
-                // Try to prettify the JSON body if possible, or just show the string
                 try {
                     const parsed = JSON.parse(redactedContent);
-                    const messages = parsed.messages || [];
-                    const lastMsg = messages[messages.length - 1]; // System prompt is likely injected at [0], so verify
-                    // Actually, we want to show the whole body mostly, or just the user message?
-                    // Let's show the whole JSON body as it illustrates the structure
-                    setDebugRedacted(JSON.stringify(parsed, null, 2));
+                    redactedBody = JSON.stringify(parsed, null, 2);
+                    // Update the user message in history with the redacted version for toggling
+                    setMessages(prev => {
+                        const copy = [...prev];
+                        const lastMsg = copy[copy.length - 1];
+                        if (lastMsg.role === 'user') {
+                            lastMsg.redactedContent = JSON.stringify(parsed.messages[parsed.messages.length - 1].content);
+                            // Clean up quotes if it was just a string
+                            if (lastMsg.redactedContent.startsWith('"') && lastMsg.redactedContent.endsWith('"')) {
+                                lastMsg.redactedContent = lastMsg.redactedContent.slice(1, -1);
+                            }
+                        }
+                        return copy;
+                    });
                 } catch {
-                    setDebugRedacted(redactedContent);
+                    redactedBody = redactedContent;
                 }
-            } else {
-                setDebugRedacted('// No debug header received. (Did backend update?)');
             }
+
 
             const data = await res.json();
+            const aiContent = data.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
 
-            if (data.choices && data.choices[0]) {
-                setDebugResponse(data.choices[0].message.content);
-            } else {
-                setDebugResponse(JSON.stringify(data, null, 2));
-            }
+            setMessages(prev => [...prev, { role: 'assistant', content: aiContent }]);
+
 
         } catch (error: any) {
-            setDebugResponse('Error: ' + error.message);
+            const errorMsg = "Error: " + error.message;
+            setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
+
         } finally {
             setIsLoading(false);
         }
     };
 
+    const toggleRedaction = (index: number) => {
+        setRedactionStates(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    }
+
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Developer Playground</h1>
-                    <p className="text-slate-400">Test PII redaction rules in real-time.</p>
-                </div>
-                <div className="flex items-center gap-4 bg-slate-900 p-2 rounded-lg border border-slate-800">
-                    <SelectModel value={model} onChange={setModel} />
-                    <button className="p-2 text-slate-400 hover:text-white transition-colors">
-                        <Settings className="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
+        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-950">
+            {/* Left Panel: System Prompt */}
+            <SystemEditor
+                value={systemPrompt}
+                onChange={setSystemPrompt}
+                isCollapsed={!showSystem}
+            />
 
-            {/* Visualizer Area */}
-            <div className="h-[400px]">
-                <RedactionVisualizer
-                    original={debugOriginal}
-                    redacted={debugRedacted}
-                    response={debugResponse}
-                    isLoading={isLoading}
-                />
-            </div>
-
-            {/* Input Area */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl">
-                <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="w-full bg-transparent text-white placeholder-slate-500 focus:outline-none resize-none font-sans text-lg"
-                    rows={3}
-                    placeholder="Enter a prompt with sensitive data (e.g. email, phone, API key)..."
-                />
-                <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-800">
-                    <div className="flex gap-2 text-xs text-slate-500 font-mono">
-                        <span className="flex items-center gap-1"><Terminal className="w-3 h-3" /> POST /v1/chat/completions</span>
+            {/* Center: Chat Interface */}
+            <div className="flex-1 flex flex-col relative min-w-0 border-l border-r border-slate-800">
+                {/* Header / Toolbar */}
+                <div className="h-14 border-b border-slate-800 bg-slate-900 flex items-center justify-between px-4 shrink-0 z-10">
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowSystem(!showSystem)}
+                            className={`p-2 rounded-md transition-colors ${showSystem ? 'bg-slate-800 text-cyan-400' : 'text-slate-400 hover:text-white'}`}
+                            title="Toggle System Prompt"
+                        >
+                            <Sidebar className="w-5 h-5" />
+                        </button>
+                        <span className="text-sm font-semibold text-white ml-2">Chat Session</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                            {messages.length} msgs
+                        </span>
                     </div>
-                    <button
-                        onClick={handleSend}
-                        disabled={isLoading}
-                        className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 px-6 rounded-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? 'Processing...' : (
-                            <>
-                                Run Test <Send className="w-4 h-4" />
-                            </>
-                        )}
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                        <SelectModel value={model} onChange={setModel} />
+
+                    </div>
+                </div>
+
+                {/* Chat Area */}
+                <div className="flex-1 min-h-0">
+                    <ChatInterface
+                        messages={messages}
+                        onSendMessage={handleSendMessage}
+                        isLoading={isLoading}
+                        onClearChat={() => setMessages([])}
+                        onToggleRedaction={(idx) => toggleRedaction(idx)}
+                        redactionStates={redactionStates}
+                    />
                 </div>
             </div>
 
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-300">
-                <strong>💡 Tip:</strong> Try forcing a secret like <code>sk-1234567890abcdef12345678</code> or <code>john.doe@example.com</code>.
-            </div>
+            {/* Right Panel: Inspector - MOVED TO /dashboard/inspector */}
+
         </div>
     );
 }
@@ -129,18 +153,16 @@ function SelectModel({ value, onChange }: { value: string, onChange: (v: string)
         <select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="bg-slate-950 text-sm font-semibold text-white focus:outline-none cursor-pointer border border-slate-700 rounded-md py-1 px-3 hover:border-cyan-500 transition-colors"
+            className="bg-slate-950 text-xs font-medium text-white focus:outline-none cursor-pointer border border-slate-700 rounded-md py-1.5 px-2 hover:border-cyan-500 transition-colors max-w-[120px] sm:max-w-none"
         >
             <optgroup label="DeepSeek">
-                <option value="deepseek-chat">DeepSeek V3 (deepseek-chat)</option>
-                <option value="deepseek-reasoner">DeepSeek R1 (deepseek-reasoner)</option>
+                <option value="deepseek-chat">DeepSeek V3</option>
+                <option value="deepseek-reasoner">DeepSeek R1</option>
             </optgroup>
             <optgroup label="OpenAI">
                 <option value="gpt-4o">GPT-4o</option>
                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="o1-preview">o1 Preview</option>
-                <option value="o1-mini">o1 Mini</option>
             </optgroup>
             <optgroup label="Anthropic">
                 <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
