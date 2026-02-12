@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,21 +22,6 @@ var (
 	apiURL  = "https://zaps.ai" // Default production URL
 )
 
-// Device Flow Structs
-type DeviceAuthResponse struct {
-	DeviceCode      string `json:"device_code"`
-	UserCode        string `json:"user_code"`
-	VerificationURI string `json:"verification_uri"`
-	ExpiresIn       int    `json:"expires_in"`
-	Interval        int    `json:"interval"`
-}
-
-type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	Error       string `json:"error"`
-}
-
 // Root Command
 var rootCmd = &cobra.Command{
 	Use:   "zaps",
@@ -49,95 +35,59 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// Login Command
+// Login Command (PKCE / Localhost Callback)
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Authenticate via Zaps.ai (Device Flow)",
+	Short: "Authenticate via Zaps.ai (Browser Flow)",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🔌 Connecting to Zaps...", apiURL)
-
-		// 1. Request Device Code
-		resp, err := http.Post(apiURL+"/auth/device/code", "application/json", nil)
+		// 1. Start Local Server
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
-			fmt.Printf("Error connecting to server: %v\n", err)
+			fmt.Printf("Failed to start local listener: %v\n", err)
 			return
 		}
-		defer resp.Body.Close()
+		port := listener.Addr().(*net.TCPAddr).Port
 
-		if resp.StatusCode != 200 {
-			fmt.Printf("Server returned error: %s\n", resp.Status)
-			return
-		}
+		fmt.Printf("🔌 Started local listener on port %d\n", port)
+		fmt.Println("Opening browser to authenticate...")
 
-		var authReq DeviceAuthResponse
-		if err := json.NewDecoder(resp.Body).Decode(&authReq); err != nil {
-			fmt.Printf("Error decoding response: %v\n", err)
-			return
-		}
+		// Channel to receive token
+		tokenCh := make(chan string)
 
-		// 2. Display Code to User
-		fmt.Println("\nAuthenticate your device:")
-		fmt.Printf("1. Visit: %s\n", authReq.VerificationURI)
-		fmt.Printf("2. Enter Code: %s\n\n", authReq.UserCode)
-
-		// Try to open browser
-		openBrowser(authReq.VerificationURI + "?user_code=" + authReq.UserCode)
-
-		fmt.Println("Waiting for approval... (Press Ctrl+C to cancel)")
-
-		// 3. Poll for Token
-		ticker := time.NewTicker(time.Duration(authReq.Interval) * time.Second)
-		defer ticker.Stop()
-
-		timeout := time.After(time.Duration(authReq.ExpiresIn) * time.Second)
-
-		for {
-			select {
-			case <-timeout:
-				fmt.Println("Timeout waiting for approval. Please try again.")
-				return
-			case <-ticker.C:
-				token, err := pollToken(authReq.DeviceCode)
-				if err != nil {
-					// Check for specific errors
-					if err.Error() == "authorization_pending" {
-						continue // Keep waiting
-					}
-					fmt.Printf("\nError: %v\n", err)
-					return
-				}
-
-				// Success!
-				saveCredentials(token)
-				return
+		// Handler
+		http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+			key := r.URL.Query().Get("key")
+			if key != "" {
+				tokenCh <- key
+				fmt.Fprint(w, `<html><body style="font-family:sans-serif;text-align:center;padding-top:50px;">
+					<h1 style="color:green">Authentication Successful</h1>
+					<p>You can close this tab and return to your terminal.</p>
+					<script>setTimeout(function(){window.close()}, 2000);</script>
+				</body></html>`)
+			} else {
+				fmt.Fprint(w, "Error: No key received.")
 			}
+		})
+
+		server := &http.Server{}
+		go func() { server.Serve(listener) }()
+
+		// 2. Open Browser
+		redirectURI := fmt.Sprintf("http://localhost:%d/callback", port)
+		authURL := fmt.Sprintf("%s/auth/cli?redirect_uri=%s", apiURL, url.QueryEscape(redirectURI))
+		openBrowser(authURL)
+
+		// 3. Wait for Token
+		fmt.Println("Waiting for browser authentication...")
+		select {
+		case token := <-tokenCh:
+			saveCredentials(token)
+			server.Shutdown(context.Background())
+		case <-time.After(2 * time.Minute):
+			fmt.Println("❌ Authentication timed out.")
+			server.Shutdown(context.Background())
 		}
 	},
-}
-
-func pollToken(deviceCode string) (string, error) {
-	payload := map[string]string{"device_code": deviceCode}
-	jsonBody, _ := json.Marshal(payload)
-
-	resp, err := http.Post(apiURL+"/auth/device/token", "application/json", bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	var result TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
-	}
-
-	if result.Error != "" {
-		if result.Error == "authorization_pending" {
-			return "", fmt.Errorf("authorization_pending")
-		}
-		return "", fmt.Errorf(result.Error)
-	}
-
-	return result.AccessToken, nil
 }
 
 func saveCredentials(key string) {
@@ -199,13 +149,23 @@ var connectCmd = &cobra.Command{
 		fmt.Printf("Using API Key: %s****\n", apiKey[:4])
 		fmt.Printf("Target Gateway: %s\n", apiURL)
 
-		startProxy(apiKey, apiURL)
+		startProxy(context.Background(), apiKey, apiURL)
+	},
+}
+
+// App Command (Menu Bar)
+var appCmd = &cobra.Command{
+	Use:   "app",
+	Short: "Start the Zaps Connect Menu Bar App",
+	Run: func(cmd *cobra.Command, args []string) {
+		startTrayApp()
 	},
 }
 
 func main() {
 	rootCmd.AddCommand(loginCmd)
 	rootCmd.AddCommand(connectCmd)
+	rootCmd.AddCommand(appCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

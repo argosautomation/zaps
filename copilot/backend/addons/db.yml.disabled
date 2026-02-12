@@ -1,0 +1,59 @@
+Parameters:
+  App:
+    Type: String
+  Env:
+    Type: String
+  Name:
+    Type: String
+
+Resources:
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets for Zaps DB
+      SubnetIds:
+        Fn::ImportValue:
+          !Sub "${App}-${Env}-PrivateSubnets"
+
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to Zaps DB
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${App}-${Env}-VpcId"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId:
+            Fn::ImportValue:
+              !Sub "${App}-${Env}-${Name}-SecurityGroup"
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBInstanceClass: db.t4g.micro
+      AllocatedStorage: 20
+      DBName: zaps
+      MasterUsername: postgres
+      # Allow Copilot to manage the password securely via SSM or SecretsManager?
+      # Copilot addons don't have a native "generate secret" function easily accessible here 
+      # without using a Custom Resource or CloudFormation hacks.
+      # Simplified approach: Use a hardcoded string for now or better, a parameter.
+      # But parameters need to be passed in.
+      # Best practice: Create a Secret resource and reference it.
+      MasterUserPassword: '{{resolve:ssm-secure:/copilot/zaps/production/secrets/DB_PASSWORD:1}}'
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      PubliclyAccessible: false
+
+Outputs:
+  DBHOST:
+    Value: !GetAtt DBInstance.Endpoint.Address
+  DBPORT:
+    Value: !GetAtt DBInstance.Endpoint.Port
+  DBUSER:
+    Value: postgres

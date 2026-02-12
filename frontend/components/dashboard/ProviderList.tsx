@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { Check, Shield, Save, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Check, Shield, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -17,9 +17,9 @@ interface ProviderConfig {
 
 const PROVIDERS = [
     { id: 'deepseek', name: 'DeepSeek', logo: '🚀', desc: 'Required for default chat completion' },
-    { id: 'openai', name: 'OpenAI', logo: '🤖', desc: 'Fallback for GPT-4o models' },
-    { id: 'anthropic', name: 'Anthropic', logo: '🧠', desc: 'Claude 3.5 Sonnet support' },
-    { id: 'gemini', name: 'Google Gemini', logo: '✨', desc: 'Gemini 1.5 Pro & Flash support' },
+    { id: 'openai', name: 'OpenAI', logo: '🤖', desc: 'Fallback for GPT-4o models', warning: 'Requires active credit balance (check billing).' },
+    { id: 'anthropic', name: 'Anthropic', logo: '🧠', desc: 'Claude 3.5 Sonnet support', warning: 'Claude 3.5 Sonnet requires Tier 1+ (Prepaid $5).' },
+    { id: 'gemini', name: 'Google Gemini', logo: '✨', desc: 'Gemini 1.5 Pro & Flash support', warning: 'Use gemini-1.5 or 2.0 models.' },
 ];
 
 export default function ProviderList() {
@@ -95,8 +95,7 @@ export default function ProviderList() {
                 const showKey = visibility[p.id];
                 const isEditing = editing[p.id];
 
-                // Show input if: Not Configured OR Is Editing
-                const showInput = !isConfigured || isEditing;
+                // const showInput = !isConfigured || isEditing;
 
                 return (
                     <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-6 transition-all hover:border-slate-700">
@@ -120,6 +119,13 @@ export default function ProviderList() {
                                         )}
                                     </h3>
                                     <p className="text-sm text-slate-500 mt-1">{p.desc}</p>
+                                    {/* Friction Reduction Warning */}
+                                    {p.warning && (
+                                        <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400/90 font-medium">
+                                            <AlertTriangle size={14} />
+                                            {p.warning}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

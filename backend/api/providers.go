@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -9,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"zaps/db"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -21,54 +22,52 @@ type ProviderConfig struct {
 	Enabled  bool   `json:"enabled"`
 }
 
-const (
-	providerKeyPrefix = "provider:"
-)
-
 // -- Handlers --
 
 // GetProviders returns a list of configured providers (with masked keys)
-func GetProviders(rdb *redis.Client) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		tenantID := c.Locals("tenant_id").(string)
+func GetProviders(c *fiber.Ctx) error {
+	tenantID, _ := uuid.Parse(c.Locals("tenant_id").(string))
 
-		// List of supported providers to check
-		supported := []string{"deepseek", "openai", "anthropic", "gemini"}
+	// List of supported providers to check
+	supported := []string{"deepseek", "openai", "anthropic", "gemini"}
 
-		configs := []map[string]interface{}{}
+	// Query DB for existing keys
+	rows, err := db.DB.Query("SELECT provider FROM provider_keys WHERE tenant_id = $1 AND enabled = true", tenantID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch providers"})
+	}
+	defer rows.Close()
 
-		for _, p := range supported {
-			// Key format: provider:{tenant_id}:{provider_name}
-			redisKey := fmt.Sprintf("%s%s:%s", providerKeyPrefix, tenantID, p)
+	configured := make(map[string]bool)
+	for rows.Next() {
+		var provider string
+		if err := rows.Scan(&provider); err == nil {
+			configured[provider] = true
+		}
+	}
 
-			val, err := rdb.Get(context.Background(), redisKey).Result()
-			if err == nil && val != "" {
-				// We found a config
-				// We don't need to decrypt it to know it's there
-				// But let's decrypt to verify integrity? Not strictly needed for list.
-
-				configs = append(configs, map[string]interface{}{
-					"provider":   p,
-					"configured": true,
-					"key_masked": "********", // Never return the real key
-				})
-			} else {
-				configs = append(configs, map[string]interface{}{
-					"provider":   p,
-					"configured": false,
-					"key_masked": "",
-				})
-			}
+	configs := []map[string]interface{}{}
+	for _, p := range supported {
+		isConfigured := configured[p]
+		mask := ""
+		if isConfigured {
+			mask = "********"
 		}
 
-		return c.JSON(configs)
+		configs = append(configs, map[string]interface{}{
+			"provider":   p,
+			"configured": isConfigured,
+			"key_masked": mask,
+		})
 	}
+
+	return c.JSON(configs)
 }
 
-// UpdateProvider saves (encrypts) a provider key
+// UpdateProvider saves (encrypts) a provider key to the database
 func UpdateProvider(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		tenantID := c.Locals("tenant_id").(string)
+		tenantID, _ := uuid.Parse(c.Locals("tenant_id").(string))
 
 		var req ProviderConfig
 		if err := c.BodyParser(&req); err != nil {
@@ -85,9 +84,14 @@ func UpdateProvider(rdb *redis.Client) fiber.Handler {
 			return c.Status(500).JSON(fiber.Map{"error": "Encryption failed"})
 		}
 
-		// Save
-		redisKey := fmt.Sprintf("%s%s:%s", providerKeyPrefix, tenantID, req.Provider)
-		err = rdb.Set(context.Background(), redisKey, encrypted, 0).Err()
+		// Upsert into DB
+		_, err = db.DB.Exec(`
+			INSERT INTO provider_keys (tenant_id, provider, encrypted_key, enabled, updated_at)
+			VALUES ($1, $2, $3, true, NOW())
+			ON CONFLICT (tenant_id, provider) 
+			DO UPDATE SET encrypted_key = EXCLUDED.encrypted_key, enabled = true, updated_at = NOW()
+		`, tenantID, req.Provider, encrypted)
+
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to save configuration"})
 		}
@@ -97,20 +101,20 @@ func UpdateProvider(rdb *redis.Client) fiber.Handler {
 }
 
 // DeleteProvider removes a provider configuration
-func DeleteProvider(rdb *redis.Client) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		tenantID := c.Locals("tenant_id").(string)
-		provider := c.Params("name")
+func DeleteProvider(c *fiber.Ctx) error {
+	tenantID, _ := uuid.Parse(c.Locals("tenant_id").(string))
+	provider := c.Params("name")
 
-		if provider == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Provider name required"})
-		}
-
-		redisKey := fmt.Sprintf("%s%s:%s", providerKeyPrefix, tenantID, provider)
-		rdb.Del(context.Background(), redisKey)
-
-		return c.JSON(fiber.Map{"status": "deleted"})
+	if provider == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Provider name required"})
 	}
+
+	_, err := db.DB.Exec("DELETE FROM provider_keys WHERE tenant_id = $1 AND provider = $2", tenantID, provider)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete provider"})
+	}
+
+	return c.JSON(fiber.Map{"status": "deleted"})
 }
 
 // -- Crypto Helpers --
@@ -183,13 +187,15 @@ func Decrypt(ciphertextHex string) (string, error) {
 }
 
 // Helper for Proxy Logic
-func GetProviderKey(rdb *redis.Client, tenantID string, provider string) (string, error) {
-	redisKey := fmt.Sprintf("%s%s:%s", providerKeyPrefix, tenantID, provider)
-	val, err := rdb.Get(context.Background(), redisKey).Result()
+func GetProviderKey(tenantID string, provider string) (string, error) {
+	var encryptedKey string
+	err := db.DB.QueryRow("SELECT encrypted_key FROM provider_keys WHERE tenant_id = $1 AND provider = $2 AND enabled = true",
+		tenantID, provider).Scan(&encryptedKey)
+
 	if err != nil {
 		return "", err
 	}
 
 	// Decrypt
-	return Decrypt(val)
+	return Decrypt(encryptedKey)
 }

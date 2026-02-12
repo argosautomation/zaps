@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -11,17 +12,35 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("No .env file found")
-	}
+	_ = godotenv.Load("../../.env")
 
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		log.Fatal("DATABASE_URL is not set")
+		host := os.Getenv("DB_HOST")
+		port := os.Getenv("DB_PORT")
+		user := os.Getenv("DB_USER")
+		password := os.Getenv("DB_PASSWORD")
+		dbname := os.Getenv("DB_NAME")
+
+		if host != "" && port != "" {
+			databaseURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require", user, password, host, port, dbname)
+		}
 	}
 
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL is not set and could not be constructed from DB_* vars")
+	}
+
+	// Try paths: Prod (/db/migrations) vs Dev (../../db/migrations)
+	sourceURL := "file:///db/migrations"
+	if _, err := os.Stat("/db/migrations"); os.IsNotExist(err) {
+		sourceURL = "file://../../db/migrations"
+	}
+
+	log.Printf("Running migrations from %s", sourceURL)
+
 	m, err := migrate.New(
-		"file://../../db/migrations",
+		sourceURL,
 		databaseURL,
 	)
 	if err != nil {

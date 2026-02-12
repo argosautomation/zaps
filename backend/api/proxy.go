@@ -19,14 +19,13 @@ import (
 )
 
 var ProviderModels = map[string][]string{
-	"openai":    {"gpt-4-turbo", "gpt-3.5-turbo"},
+	"openai":    {"gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"},
 	"anthropic": {"claude-3-opus", "claude-3-sonnet", "claude-3-5-sonnet", "claude-3-haiku-20240307"},
 	"deepseek":  {"deepseek-chat", "deepseek-coder"},
 	"gemini": {
-		"gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro",
-		"models/gemini-pro", "models/gemini-1.5-flash", "models/gemini-1.5-pro",
-		"gemini-1.5-flash-latest", "gemini-1.5-pro-latest",
-		"models/gemini-1.5-flash-latest", "models/gemini-1.5-pro-latest",
+		"gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro",
+		"gemini-2.5-flash", "gemini-2.5-pro",
+		"gemini-pro",
 	},
 }
 
@@ -136,7 +135,7 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		}
 
 		// 2. Resolve Credentials
-		apiKey, err := GetProviderKey(rdb, ownerID, provider)
+		apiKey, err := GetProviderKey(tenantID, provider)
 
 		// Fallback to Global Config for DeepSeek
 		if (err != nil || apiKey == "") && provider == ProviderDeepSeek {
@@ -194,14 +193,28 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		// Forward to Upstream
 		var reqBodyBytes []byte
 
-		if provider == "anthropic" {
-			// Convert OAI -> Anthropic
+		// Transform request for Anthropic (OpenAI -> Anthropic)
+		if provider == ProviderAnthropic {
 			anthropicBody, convertErr := ConvertOpenAIToAnthropic(body)
 			if convertErr != nil {
 				return c.Status(400).JSON(fiber.Map{"error": "Failed to convert request for Anthropic"})
 			}
 			reqBodyBytes, _ = json.Marshal(anthropicBody)
 			targetURL = "https://api.anthropic.com/v1/messages" // Override URL
+		} else if provider == ProviderGemini {
+			// Remap deprecated Gemini model aliases
+			if model, ok := body["model"].(string); ok {
+				switch model {
+				case "gemini-pro":
+					model = "gemini-2.0-flash"
+				}
+				// Gemini API requires models/ prefix
+				if len(model) < 7 || model[:7] != "models/" {
+					model = "models/" + model
+				}
+				body["model"] = model
+			}
+			reqBodyBytes, _ = json.Marshal(body)
 		} else {
 			reqBodyBytes, _ = json.Marshal(body)
 		}
@@ -242,6 +255,35 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 				responseBody = convertedResp
 			} else {
 				log.Printf("Failed to convert Anthropic response: %v", err)
+			}
+		}
+
+		// FRICTION REDUCTION: Enhance Error Messages
+		if resp.StatusCode >= 400 {
+			var errResp map[string]interface{}
+			if err := json.Unmarshal(responseBody, &errResp); err == nil {
+				// OpenAI Style Error
+				if errObj, ok := errResp["error"].(map[string]interface{}); ok {
+					msg, _ := errObj["message"].(string)
+					code, _ := errObj["code"].(string)
+					errType, _ := errObj["type"].(string)
+
+					// 1. OpenAI Quota Issues
+					if code == "insufficient_quota" || code == "billing_hard_limit_reached" {
+						errObj["message"] = msg + " [ZAPS HELP: Your OpenAI account has no credits. Go to Settings > Billing to add funds.]"
+					}
+
+					// 2. Anthropic Tier / Model Issues
+					// Note: provider constant is "anthropic" (lowercase) based on line 252 check
+					if errType == "not_found_error" && provider == "anthropic" {
+						errObj["message"] = msg + " [ZAPS HELP: If using Claude 3.5 Sonnet, you must be Tier 1 (Prepaid $5). Free keys only support Haiku.]"
+					}
+
+					// Re-marshal modified error
+					if modifiedBody, err := json.Marshal(errResp); err == nil {
+						responseBody = modifiedBody
+					}
+				}
 			}
 		}
 
@@ -289,7 +331,8 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 // HandleListModels lists available models
 func HandleListModels(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		ownerID, _ := c.Locals("owner_id").(string)
+
+		tenantID, _ := c.Locals("tenant_id").(string)
 
 		type Model struct {
 			ID      string `json:"id"`
@@ -301,7 +344,7 @@ func HandleListModels(rdb *redis.Client) fiber.Handler {
 
 		// Iterate over all supported providers
 		for provider, models := range ProviderModels {
-			apiKey, err := GetProviderKey(rdb, ownerID, provider)
+			apiKey, err := GetProviderKey(tenantID, provider)
 
 			// Special check for DeepSeek global config fallback
 			if (err != nil || apiKey == "") && provider == ProviderDeepSeek {

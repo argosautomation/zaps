@@ -1,0 +1,52 @@
+Parameters:
+  App:
+    Type: String
+  Env:
+    Type: String
+  Name:
+    Type: String
+
+Resources:
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Subnets for Zaps Redis
+      SubnetIds:
+        Fn::ImportValue:
+          !Sub "${App}-${Env}-PrivateSubnets"
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to Zaps Redis
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${App}-${Env}-VpcId"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId:
+            Fn::ImportValue:
+              !Sub "${App}-${Env}-${Name}-SecurityGroup"
+
+  RedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: Zaps Redis
+      Engine: redis
+      CacheNodeType: cache.t4g.micro
+      NumCacheClusters: 1
+      AutomaticFailoverEnabled: false
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      SecurityGroupIds:
+        - !Ref RedisSecurityGroup
+      Port: 6379
+
+Outputs:
+  REDISURL:
+    Value: !Join
+      - ""
+      - - "redis://"
+        - !GetAtt RedisCluster.PrimaryEndPoint.Address
+        - ":6379"

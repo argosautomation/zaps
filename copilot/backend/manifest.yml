@@ -1,0 +1,67 @@
+# The manifest for the "backend" service.
+# Read the full specification for the "Backend Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: backend
+type: Backend Service
+
+# Your service is reachable at "http://backend.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:3000" but is not public.
+
+# Configuration for your containers and service.
+image:
+  build: backend/Dockerfile
+  port: 3000
+  healthcheck:
+    command: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+    interval: 10s
+    retries: 5
+    start_period: 10s
+    timeout: 5s
+
+cpu: 256       # Number of CPU units for the task.
+memory: 512    # Amount of memory in MiB used by the task.
+platform: linux/arm64     # See https://aws.github.io/copilot-cli/docs/manifest/backend-service/#platform
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
+network:
+  connect: true # Enable Service Connect for intra-environment traffic between services.
+
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
+
+# Optional fields for more advanced use-cases.
+#
+variables:
+  LOG_LEVEL: info
+  GO_ENV: production
+  DB_HOST: zaps-prod-db.cg102m860298.us-east-1.rds.amazonaws.com
+  DB_PORT: "5432"
+  DB_USER: postgres
+  DB_NAME: zaps
+  REDIS_URL: zaps-prod-redis.vuigzd.ng.0001.use1.cache.amazonaws.com:6379
+  FRONTEND_URL: https://zaps.ai
+  GOOGLE_REDIRECT_URL: https://zaps.ai/auth/google/callback
+  GITHUB_REDIRECT_URL: https://zaps.ai/auth/github/callback
+  MAILGUN_DOMAIN: zaps.ai
+
+secrets:
+  DB_PASSWORD: /copilot/zaps/production/secrets/DB_PASSWORD
+  JWT_SECRET: /copilot/zaps/production/secrets/JWT_SECRET
+  ENCRYPTION_KEY: /copilot/zaps/production/secrets/ENCRYPTION_KEY
+  GOOGLE_CLIENT_ID: /copilot/zaps/production/secrets/GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_SECRET: /copilot/zaps/production/secrets/GOOGLE_CLIENT_SECRET
+  GITHUB_CLIENT_ID: /copilot/zaps/production/secrets/GITHUB_CLIENT_ID
+  GITHUB_CLIENT_SECRET: /copilot/zaps/production/secrets/GITHUB_CLIENT_SECRET
+  MAILGUN_API_KEY: /copilot/zaps/production/secrets/MAILGUN_API_KEY
+  DEEPSEEK_API_KEY: /copilot/zaps/production/secrets/DEEPSEEK_API_KEY
+  STRIPE_SECRET_KEY: /copilot/zaps/production/secrets/STRIPE_SECRET_KEY
+  STRIPE_WEBHOOK_SECRET: /copilot/zaps/production/secrets/STRIPE_WEBHOOK_SECRET
+  STRIPE_PRICE_ID_PRO: /copilot/zaps/production/secrets/STRIPE_PRICE_ID_PRO
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.
+#    deployment:            # The deployment strategy for the "test" environment.
+#       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.

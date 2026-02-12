@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o migrate ./cmd/mig
 # Final stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates curl
 
 WORKDIR /app
 
@@ -35,6 +35,7 @@ COPY --from=builder /app/public ./public
 # Copy migrations
 COPY --from=builder /app/db/migrations /db/migrations
 
+ENV PORT=3000
 EXPOSE 3000
 
-CMD ["./gateway"]
+CMD ["sh", "-c", "./migrate && ./gateway"]

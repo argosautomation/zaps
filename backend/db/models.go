@@ -100,5 +100,16 @@ type AuditLog struct {
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 }
 
+// ProviderKey represents an encrypted API key for an upstream LLM provider
+type ProviderKey struct {
+	ID           uuid.UUID `json:"id" db:"id"`
+	TenantID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	Provider     string    `json:"provider" db:"provider"`
+	EncryptedKey string    `json:"-" db:"encrypted_key"` // Never expose
+	Enabled      bool      `json:"enabled" db:"enabled"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+}
+
 // JSONBMap is a helper type for PostgreSQL JSONB columns
 type JSONBMap map[string]interface{}

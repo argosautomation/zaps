@@ -1,12 +1,15 @@
 #!/bin/bash
+# ============================================================
+# Staging Deploy Script — deploys to dev.zaps.ai (Lightsail)
+# ============================================================
+set -e
 
-# Configuration
 SERVER_IP="18.118.93.50"
 SSH_KEY="~/.ssh/zaps_deploy_key"
 REMOTE_USER="ubuntu"
-REMOTE_DIR="~/zaps-prod"
+REMOTE_DIR="~/zaps-staging"
 
-echo "🚀 Starting Deployment to $SERVER_IP..."
+echo "🧪 Starting STAGING deployment to dev.zaps.ai ($SERVER_IP)..."
 
 # 1. Clean previous artifacts
 rm -f deploy.tar.gz
@@ -28,45 +31,44 @@ tar -czf deploy.tar.gz \
     --exclude='.env' \
     --exclude='backend/.env' \
     --exclude='frontend/.env' \
+    --exclude='.gemini' \
+    --exclude='copilot' \
     .
 
 # 3. Upload to server
-echo "Pc Uploading to server..."
+echo "📤 Uploading to server..."
 scp -i $SSH_KEY deploy.tar.gz $REMOTE_USER@$SERVER_IP:$REMOTE_DIR/
 
 # 4. Remote execution (Extract & Rebuild)
 echo "🛠️  Building and restarting on server..."
-ssh -i $SSH_KEY $REMOTE_USER@$SERVER_IP << EOF
-    cd $REMOTE_DIR
-    
-    # Backup current .env files just in case
-    cp .env .env.bak
-    cp backend/.env backend/.env.bak
-    cp frontend/.env frontend/.env.bak
+ssh -i $SSH_KEY $REMOTE_USER@$SERVER_IP << 'EOF'
+    cd ~/zaps-staging
 
-    # Extract new code (overwriting old)
+    # Backup .env files
+    [ -f .env ] && cp .env .env.bak
+    [ -f backend/.env ] && cp backend/.env backend/.env.bak
+
+    # Extract new code
     tar -xzf deploy.tar.gz
 
-    # Restore .env files (so we don't overwrite prod secrets with local dev envs if they were included)
-    # NOTE: We carefully rely on the server's .env being the source of truth.
-    # If deploy.tar.gz contains .env, it would overwrite. 
-    # Let's ensure we don't accidentally nuke prod secrets.
-    # actually, usually we EXCLUDE .env from the tar, but if you have a local .env it might get in.
-    # Safest is to explicitly restore from backup or exclude .env in tar.
-    # I added --exclude '.env' to tar command below in my mind, let me add it to the script above to be safe.
-    
-    # Rebuild Single Services or All
-    # We'll rebuild both to be safe, valid for code changes in either.
+    # Restore .env from backup (code deploy should never overwrite secrets)
+    [ -f .env.bak ] && mv .env.bak .env
+    [ -f backend/.env.bak ] && mv backend/.env.bak backend/.env
+
+    # Rebuild and restart
     docker compose -f docker-compose.prod.yml up -d --build
 
     # Cleanup
-    rm deploy.tar.gz
-    
-    # Prune old images to save space
+    rm -f deploy.tar.gz
     docker image prune -f
+
+    echo "✅ Staging containers:"
+    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 EOF
 
 # Cleanup local
-rm deploy.tar.gz
+rm -f deploy.tar.gz
 
-echo "✅ Deployment Complete!"
+echo ""
+echo "✅ Staging deployment complete!"
+echo "🌐 https://dev.zaps.ai"

@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthLayout from '@/components/AuthLayout'
 import ResendVerificationButton from '@/components/ResendVerificationButton'
 
-export default function LoginPage() {
+function LoginContent() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -47,7 +48,12 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Login failed')
             }
 
-            router.push('/dashboard')
+            const nextUrl = searchParams.get('next')
+            if (nextUrl) {
+                window.location.href = nextUrl
+            } else {
+                router.push('/dashboard')
+            }
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Invalid credentials'
             setError(errorMessage)
@@ -60,22 +66,17 @@ export default function LoginPage() {
     }
 
     return (
-        <AuthLayout
-            title="Welcome back."
-            subtitle="Access your secure gateways and monitor real-time PII logs."
-        >
-            <div className="mb-8 text-center lg:text-left">
-                <h2 className="text-2xl font-bold text-white mb-2">
-                    {step === 'credentials' ? 'Sign in to Zaps' : 'Two-Factor Authentication'}
-                </h2>
-                <p className="text-slate-400">
-                    {step === 'credentials'
-                        ? 'Enter your details to proceed'
-                        : 'Enter the 6-digit code from your authenticator app'}
-                </p>
-            </div>
+        <div className="mb-8 text-center lg:text-left">
+            <h2 className="text-2xl font-bold text-white mb-2">
+                {step === 'credentials' ? 'Sign in to Zaps' : 'Two-Factor Authentication'}
+            </h2>
+            <p className="text-slate-400">
+                {step === 'credentials'
+                    ? 'Enter your details to proceed'
+                    : 'Enter the 6-digit code from your authenticator app'}
+            </p>
 
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-6 mt-6" onSubmit={handleSubmit}>
                 {error && (
                     <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm flex flex-col gap-3">
                         <div className="flex items-center gap-2">
@@ -231,7 +232,19 @@ export default function LoginPage() {
                     </button>
                 </p>
             )}
-        </AuthLayout>
+        </div>
     )
 }
 
+export default function LoginPage() {
+    return (
+        <AuthLayout
+            title="Welcome back."
+            subtitle="Access your secure gateways and monitor real-time PII logs."
+        >
+            <Suspense fallback={<div className="text-center text-slate-500">Loading...</div>}>
+                <LoginContent />
+            </Suspense>
+        </AuthLayout>
+    )
+}

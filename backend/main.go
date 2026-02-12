@@ -36,6 +36,10 @@ func main() {
 	// Connect to Redis
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
+		// Fallback for AWS Copilot (alphanumeric output)
+		redisURL = os.Getenv("REDISURL")
+	}
+	if redisURL == "" {
 		redisURL = "localhost:6379"
 	}
 
@@ -93,7 +97,7 @@ func main() {
 	}
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3001, http://localhost:3000, https://app.glassdesk.ai, https://glassdesk.ai, https://zaps.ai, https://www.zaps.ai, https://api.zaps.ai",
+		AllowOrigins:     "http://localhost:3001, http://localhost:3000, https://app.glassdesk.ai, https://glassdesk.ai, https://zaps.ai, https://www.zaps.ai, https://api.zaps.ai, https://dev.zaps.ai",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, x-client-id",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
 		AllowCredentials: true,
@@ -227,9 +231,9 @@ func main() {
 	dashboard.Delete("/keys/:id", api.RevokeAPIKey)
 	dashboard.Get("/logs", api.GetAuditLogs)
 	dashboard.Get("/reports/export", api.ExportAuditLogs)
-	dashboard.Get("/providers", api.GetProviders(rdb))
+	dashboard.Get("/providers", api.GetProviders)
 	dashboard.Post("/providers", api.UpdateProvider(rdb))
-	dashboard.Delete("/providers/:name", api.DeleteProvider(rdb))
+	dashboard.Delete("/providers/:name", api.DeleteProvider)
 
 	// User & Organization Management
 	dashboard.Get("/profile", api.GetProfile)

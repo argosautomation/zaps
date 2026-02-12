@@ -17,6 +17,34 @@ var DB *sql.DB
 func InitDB() error {
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
+		// Construct from individual params (AWS Copilot)
+		host := os.Getenv("DB_HOST")
+		if host == "" {
+			host = os.Getenv("DBHOST") // Copilot addon output
+		}
+		port := os.Getenv("DB_PORT")
+		if port == "" {
+			port = os.Getenv("DBPORT")
+		}
+		user := os.Getenv("DB_USER")
+		if user == "" {
+			user = os.Getenv("DBUSER")
+		}
+		password := os.Getenv("DB_PASSWORD")
+		if password == "" {
+			password = os.Getenv("DBPASSWORD")
+		}
+		dbname := os.Getenv("DB_NAME")
+		if dbname == "" {
+			dbname = "zaps"
+		}
+
+		if host != "" && port != "" {
+			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require", user, password, host, port, dbname)
+		}
+	}
+
+	if connStr == "" {
 		return fmt.Errorf("DATABASE_URL environment variable not set")
 	}
 

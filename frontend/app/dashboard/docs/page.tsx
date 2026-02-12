@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import SnippetGenerator from '@/components/dashboard/SnippetGenerator';
-import { Shield, Key, Lock, ExternalLink, Terminal } from 'lucide-react';
+import { Shield, Key, Lock, ExternalLink, Terminal, AlertCircle } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -70,6 +70,44 @@ export default function DocsPage() {
                         </p>
 
                         <SnippetGenerator apiKey={activeKey} />
+                    </section>
+
+                    <section className="space-y-6 pt-8 border-t border-slate-800">
+                        <div className="flex items-center gap-2 text-white font-semibold text-lg">
+                            <AlertCircle className="text-amber-400" size={20} />
+                            <h2>Troubleshooting Common Errors</h2>
+                        </div>
+                        <div className="grid gap-4">
+                            <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-lg">
+                                <h3 className="text-white font-medium mb-2 flex items-center gap-2">
+                                    <span className="text-red-400 font-mono text-sm">402 Payment Required</span>
+                                    <span className="text-slate-500 text-sm">/</span>
+                                    <span className="text-red-400 font-mono text-sm">insufficient_quota</span>
+                                </h3>
+                                <p className="text-sm text-slate-400">
+                                    <strong>Cause:</strong> Your OpenAI API key has no active credits.
+                                    <br />
+                                    <strong>Fix:</strong> Add credits to your OpenAI account (Settings &gt; Billing). A linked card alone is not enough; you must pre-purchase credits.
+                                </p>
+                            </div>
+
+                            <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-lg">
+                                <h3 className="text-white font-medium mb-2 flex items-center gap-2">
+                                    <span className="text-red-400 font-mono text-sm">404 Not Found</span>
+                                    <span className="text-slate-500 text-sm">/</span>
+                                    <span className="text-red-400 font-mono text-sm">model_not_found</span>
+                                </h3>
+                                <p className="text-sm text-slate-400">
+                                    <strong>Cause:</strong> Your API key does not have access to the requested model.
+                                    <br />
+                                    <strong>Fix:</strong>
+                                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                                        <li><strong>Anthropic:</strong> Claude 3.5 Sonnet requires a <strong>Tier 1+</strong> account (min. $5 prepaid). Free keys are restricted to Haiku.</li>
+                                        <li><strong>Check Typos:</strong> Ensure you are using a supported model ID (e.g., <code>claude-3-5-sonnet-latest</code>).</li>
+                                    </ul>
+                                </p>
+                            </div>
+                        </div>
                     </section>
                 </div>
 

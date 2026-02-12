@@ -1,14 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/elazarl/goproxy"
 )
 
-func startProxy(apiKey string, targetURL string) {
+func startProxy(ctx context.Context, apiKey string, targetURL string) {
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.Verbose = true
 
@@ -48,6 +50,29 @@ func startProxy(apiKey string, targetURL string) {
 		})
 
 	log.Println("🚀 Zaps Connect Proxy listening on :8888")
-	// Listen on all interfaces
-	log.Fatal(http.ListenAndServe(":8888", proxy))
+
+	server := &http.Server{
+		Addr:    ":8888",
+		Handler: proxy,
+	}
+
+	// Run server in goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+
+	// Wait for context cancellation
+	<-ctx.Done()
+
+	// Shutdown gracefully
+	log.Println("🛑 Stopping Zaps Connect Proxy...")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatal("Server Shutdown:", err)
+	}
+	log.Println("✅ Proxy stopped")
 }

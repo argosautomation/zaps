@@ -106,9 +106,9 @@ func ConvertOpenAIToAnthropic(body map[string]interface{}) (map[string]interface
 	model := body["model"].(string)
 	switch model {
 	case "claude-3-5-sonnet":
-		model = "claude-3-5-sonnet-20240620"
+		model = "claude-3-5-sonnet-latest"
 	case "claude-3-opus":
-		model = "claude-3-opus-20240229"
+		model = "claude-3-opus-latest"
 	case "claude-3-sonnet":
 		model = "claude-3-sonnet-20240229"
 	case "claude-3-haiku":
