@@ -49,7 +49,7 @@ func AuthMiddleware(rdb *redis.Client) fiber.Handler {
 				}
 				secret := os.Getenv("JWT_SECRET")
 				if secret == "" {
-					secret = "default-dev-secret-do-not-use-in-prod"
+					return nil, fmt.Errorf("JWT_SECRET environment variable is not set")
 				}
 				return []byte(secret), nil
 			})

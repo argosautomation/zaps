@@ -105,7 +105,6 @@ func IncrementUsage(tenantID string) {
 func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		clientID := c.Get("x-client-id", "unknown")
-		ownerID, _ := c.Locals("owner_id").(string)
 		tenantID, _ := c.Locals("tenant_id").(string) // Ensure AuthMiddleware sets this
 		startTime := time.Now()
 
@@ -293,6 +292,19 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 		// ASYNC AUDIT LOGGING & USAGE TRACKING
 		latency := time.Since(startTime)
 
+		// Extract token count from upstream response
+		totalTokens := 0
+		if resp.StatusCode == 200 {
+			var respJSON map[string]interface{}
+			if err := json.Unmarshal(responseBody, &respJSON); err == nil {
+				if usage, ok := respJSON["usage"].(map[string]interface{}); ok {
+					if tt, ok := usage["total_tokens"].(float64); ok {
+						totalTokens = int(tt)
+					}
+				}
+			}
+		}
+
 		// Increment Usage if successful (Total Tenant Usage)
 		if resp.StatusCode == 200 {
 			go IncrementUsage(tenantID)
@@ -300,7 +312,7 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 
 		// Log Hourly Usage Stats (Async)
 		isError := resp.StatusCode >= 400
-		services.LogRequestUsage(tenantID, latency.Milliseconds(), isError, 0) // Tokens 0 for now
+		services.LogRequestUsage(tenantID, latency.Milliseconds(), isError, totalTokens)
 
 		// Create sanitized event data
 		eventData := map[string]interface{}{
@@ -308,6 +320,7 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 			"model":        model,
 			"status":       resp.StatusCode,
 			"latency_ms":   latency.Milliseconds(),
+			"total_tokens": totalTokens,
 			"redacted":     len(secretMap) > 0,
 			"redact_count": len(secretMap),
 			"request_len":  len(reqBodyBytes),
@@ -316,7 +329,8 @@ func HandleChatCompletion(rdb *redis.Client) fiber.Handler {
 			"pii_details": services.SanitizeMap(secretMap),
 		}
 
-		services.LogAuditAsync(ownerID, nil, "PROXY_REQUEST", eventData, c.IP(), c.Get("User-Agent"))
+		// FIX: Use tenantID (not ownerID) so audit logs match dashboard queries
+		services.LogAuditAsync(tenantID, nil, "PROXY_REQUEST", eventData, c.IP(), c.Get("User-Agent"))
 
 		// PLAYGROUND DEBUG SUPPORT
 		if c.Get("X-Zaps-Debug") == "true" {

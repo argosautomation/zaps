@@ -54,7 +54,7 @@ services:
       - DEEPSEEK_API_URL=${DEEPSEEK_API_URL:-https://api.deepseek.com}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN}
-      - JWT_SECRET=${JWT_SECRET:-development-secret-change-in-production}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
       - GO_ENV=${GO_ENV:-development}
     depends_on:
