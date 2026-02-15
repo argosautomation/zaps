@@ -205,7 +205,7 @@ func main() {
 	})
 
 	// Stripe Webhook (Public)
-	app.Post("/webhooks/stripe", api.HandleStripeWebhook)
+	app.Post("/api/webhooks/stripe", api.HandleStripeWebhook)
 
 	// ==============================================
 	// DASHBOARD & NEW ADMIN ROUTES (New SaaS)

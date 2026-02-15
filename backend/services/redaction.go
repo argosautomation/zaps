@@ -22,6 +22,8 @@ var SecretPatterns = map[string]*regexp.Regexp{
 	"GOOGLE_KEY":   regexp.MustCompile(`AIza[0-9A-Za-z\-_]{35}`),
 	"AWS_KEY":      regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
 	"UUID":         regexp.MustCompile(`\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b`),
+	"TWILIO_SID":   regexp.MustCompile(`\bAC[a-f0-9]{32}\b`),
+	"PRIVATE_KEY":  regexp.MustCompile(`-----BEGIN [A-Z ]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+ PRIVATE KEY-----`),
 	"GENERIC_API":  regexp.MustCompile(`(?i)(api[\s_-]?key|secret[\s_-]?key|access[\s_-]?token)(?:\s+is)?[\s:=]+['"]?([^\s'"]{20,})['"]?`),
 }
 

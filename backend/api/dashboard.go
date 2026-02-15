@@ -21,9 +21,22 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	tenantID, _ := uuid.Parse(c.Locals("tenant_id").(string))
 
 	// Get total requests for today
+	// Get Tenant Usage & Plan
 	var requestsToday int64
+	var monthlyQuota int
+	var subscriptionTier string
+
 	today := time.Now().Truncate(24 * time.Hour)
-	err := db.DB.QueryRow(`
+
+	// Fetch plan details from tenants table
+	err := db.DB.QueryRow("SELECT subscription_tier, monthly_quota FROM tenants WHERE id = $1", tenantID).Scan(&subscriptionTier, &monthlyQuota)
+	if err != nil {
+		monthlyQuota = 1000 // Fallback
+		subscriptionTier = "free"
+	}
+
+	// Calculate usage (requests today)
+	err = db.DB.QueryRow(`
 		SELECT COALESCE(SUM(request_count), 0)
 		FROM usage_logs
 		WHERE tenant_id = $1 AND hour_bucket >= $2
@@ -80,10 +93,13 @@ func GetDashboardStats(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"requests_today": requestsToday,
-		"active_keys":    activeKeys,
-		"pii_redacted":   piiRedacted,
-		"usage_history":  usageHistory,
+		"requests_today":    requestsToday,
+		"monthly_usage":     requestsToday, // Mapping for frontend
+		"monthly_quota":     monthlyQuota,
+		"subscription_tier": subscriptionTier,
+		"active_keys":       activeKeys,
+		"pii_redacted":      piiRedacted,
+		"usage_history":     usageHistory,
 	})
 }
 

@@ -127,7 +127,9 @@ func HandleStripeWebhook(c *fiber.Ctx) error {
 	sigHeader := c.Get("Stripe-Signature")
 	endpointSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
 
-	event, err := webhook.ConstructEvent(payload, sigHeader, endpointSecret)
+	event, err := webhook.ConstructEventWithOptions(payload, sigHeader, endpointSecret, webhook.ConstructEventOptions{
+		IgnoreAPIVersionMismatch: true,
+	})
 	if err != nil {
 		// If secret is not set (dev mode), try parsing without verification or just log warning
 		if endpointSecret == "" {
