@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, X } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 const tiers = [
     {
@@ -10,7 +10,7 @@ const tiers = [
         id: 'tier-free',
         href: '#',
         price: '$0',
-        description: 'Perfect for hobbyists and individual developers.',
+        description: 'Perfect for testing and personal projects.',
         features: [
             '1,000 requests per month',
             'Basic PII Redaction',
@@ -20,33 +20,50 @@ const tiers = [
         mostPopular: false,
     },
     {
+        name: 'Starter',
+        id: 'tier-starter',
+        href: '#',
+        price: '$49',
+        description: 'Perfect for growing apps that need real protection.',
+        features: [
+            '50,000 requests/mo',
+            'Secure PII Rehydration',
+            'Custom PII Patterns',
+            'Email & Slack Alerts',
+            '7-day Audit Log Retention',
+        ],
+        mostPopular: true,
+    },
+    {
         name: 'Pro',
         id: 'tier-pro',
         href: '#',
-        price: '$29',
-        description: 'For professional developers and small teams.',
+        price: '$249',
+        description: 'For scaling teams requiring compliance & control.',
         features: [
-            '50,000 requests per month',
-            'Advanced PII Redaction',
-            'Up to 5 Users',
-            'Priority Email Support',
-            'Audit Logs (30 days)',
+            '250,000 requests/mo',
+            'Everything in Starter',
+            'Secure PII Rehydration',
+            'SSO & SAML (Coming Soon)',
+            'Team Collaboration Seats',
+            '30-day Audit Log Retention',
+            'Priority Support',
         ],
-        mostPopular: true,
+        mostPopular: false,
     },
     {
         name: 'Enterprise',
         id: 'tier-enterprise',
         href: '#',
         price: 'Custom',
-        description: 'Dedicated support and infrastructure for your company.',
+        description: 'Bank-grade security for regulated industries.',
         features: [
-            'Unlimited requests',
-            'Custom Rehydration Rules',
-            'Unlimited Users',
+            'Unlimited volume',
+            'On-Premise Deployment',
+            'HIPAA BAA & SOC 2 Report',
             'Dedicated Success Manager',
-            'Audit Logs (Forever)',
-            'SLA 99.99%',
+            'Custom SLA',
+            '99.99% Uptime Guarantee',
         ],
         mostPopular: false,
     },
@@ -62,17 +79,13 @@ export default function PricingPage() {
     const handleCheckout = async (priceId: string) => {
         setLoading(priceId)
         try {
-            // Hardcoded Price ID for demo/placeholder keys
-            // In prod, use the real Stripe Price ID
-            const realPriceId = 'price_1234567890'
-
             const res = await fetch('/api/billing/checkout', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${sessionStorage.getItem('token')}` // Assuming implicit auth or proxy handling
                 },
-                body: JSON.stringify({ price_id: realPriceId }),
+                body: JSON.stringify({ priceID: priceId }),
             })
 
             if (!res.ok) throw new Error('Checkout failed')
@@ -128,16 +141,31 @@ export default function PricingPage() {
                                 {tier.price !== 'Custom' && <span className="text-sm font-semibold leading-6 text-slate-400">/month</span>}
                             </p>
                             <button
-                                onClick={() => tier.price !== 'Custom' && tier.price !== '$0' ? null : (tier.price === 'Custom' ? window.location.href = 'mailto:sales@zaps.ai' : null)}
+                                onClick={() => {
+                                    if (tier.id === 'tier-starter') {
+                                        // Starter Plan ($49)
+                                        handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '');
+                                    } else if (tier.id === 'tier-pro') {
+                                        // Pro Plan ($249)
+                                        handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '');
+                                    } else if (tier.price === 'Custom') {
+                                        window.location.href = 'mailto:sales@zaps.ai';
+                                    }
+                                }}
+                                disabled={loading !== null || tier.price === '$0'}
                                 className={classNames(
                                     tier.mostPopular
-                                        ? 'bg-cyan-500 text-white shadow-sm opacity-50 cursor-not-allowed'
+                                        ? 'bg-cyan-500 text-white shadow-sm hover:bg-cyan-400'
                                         : 'bg-white/10 text-white hover:bg-white/20',
                                     'mt-6 block rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 w-full disabled:opacity-50 disabled:cursor-not-allowed'
                                 )}
-                                disabled={tier.price !== '$0' && tier.price !== 'Custom'}
                             >
-                                {tier.price === '$0' ? 'Current Plan' : (tier.price === 'Custom' ? 'Contact Sales' : 'Coming Soon')}
+                                {loading === tier.id ? 'Processing...' : (
+                                    tier.price === '$0' ? 'Current Plan' :
+                                        (tier.id === 'tier-starter' ? 'Start Free Trial' :
+                                            (tier.id === 'tier-pro' ? 'Start Pro Trial' :
+                                                (tier.price === 'Custom' ? 'Contact Sales' : 'Coming Soon')))
+                                )}
                             </button>
                             <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-slate-400 xl:mt-10">
                                 {tier.features.map((feature) => (

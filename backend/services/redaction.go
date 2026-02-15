@@ -15,11 +15,12 @@ var SecretPatterns = map[string]*regexp.Regexp{
 	"OPENAI_KEY":   regexp.MustCompile(`sk-[a-zA-Z0-9_-]{20,}`),
 	"EMAIL":        regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`),
 	"PHONE":        regexp.MustCompile(`\b(\d{3}[-.]?)?\d{3}[-.]?\d{4}\b`),
+	"SSN":          regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`),
 	"CREDIT_CARD":  regexp.MustCompile(`\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b`),
 	"GITHUB_TOKEN": regexp.MustCompile(`ghp_[a-zA-Z0-9]{36,}`),
 	"STRIPE_KEY":   regexp.MustCompile(`sk_live_[a-zA-Z0-9]{24,}`),
 	"AWS_KEY":      regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
-	"GENERIC_API":  regexp.MustCompile(`(?i)(api[_-]?key|secret[_-]?key|access[_-]?token)[\s:=]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?`),
+	"GENERIC_API":  regexp.MustCompile(`(?i)(api[\s_-]?key|secret[\s_-]?key|access[\s_-]?token)(?:\s+is)?[\s:=]+['"]?([^\s'"]{20,})['"]?`),
 }
 
 // RedactSecrets finds secrets and replaces them with tokens

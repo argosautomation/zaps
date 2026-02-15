@@ -57,7 +57,9 @@ secrets:
   DEEPSEEK_API_KEY: /copilot/zaps/production/secrets/DEEPSEEK_API_KEY
   STRIPE_SECRET_KEY: /copilot/zaps/production/secrets/STRIPE_SECRET_KEY
   STRIPE_WEBHOOK_SECRET: /copilot/zaps/production/secrets/STRIPE_WEBHOOK_SECRET
-  STRIPE_PRICE_ID_PRO: /copilot/zaps/production/secrets/STRIPE_PRICE_ID_PRO
+  STRIPE_PRICE_STARTER: /copilot/zaps/production/secrets/STRIPE_PRICE_STARTER
+  STRIPE_PRICE_PRO: /copilot/zaps/production/secrets/STRIPE_PRICE_PRO
+  STRIPE_PUBLISHABLE_KEY: /copilot/zaps/production/secrets/STRIPE_PUBLISHABLE_KEY
 
 # You can override any of the values defined above by environment.
 #environments:

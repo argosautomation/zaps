@@ -207,20 +207,24 @@ func handleSubscriptionUpdated(sub *stripe.Subscription) {
 
 	// Determine Tier based on Price ID (env vars or map)
 	tier := "pro" // Default
+	quota := 250000
+
 	if priceID == os.Getenv("STRIPE_PRICE_STARTER") {
 		tier = "starter"
+		quota = 50000
 	}
 	// Enterprise handled manually via sales for now
 
-	log.Printf("🔄 Syncing Subscription: %s is %s (%s)", customerID, status, tier)
+	log.Printf("🔄 Syncing Subscription: %s is %s (%s) - Quota: %d", customerID, status, tier, quota)
 
 	// Update Tenants Table
 	_, err := db.DB.Exec(`
 		UPDATE tenants 
 		SET subscription_tier = $1, 
+		    monthly_quota = $2,
 		    updated_at = NOW()
-		WHERE stripe_customer_id = $2
-	`, tier, customerID)
+		WHERE stripe_customer_id = $3
+	`, tier, quota, customerID)
 
 	if err != nil {
 		log.Printf("❌ Failed to update tenant tier: %v", err)
@@ -268,6 +272,7 @@ func handleSubscriptionDeleted(sub *stripe.Subscription) {
 	_, err := db.DB.Exec(`
 		UPDATE tenants 
 		SET subscription_tier = 'free', 
+		    monthly_quota = 1000,
 		    updated_at = NOW()
 		WHERE stripe_customer_id = $1
 	`, customerID)

@@ -106,10 +106,37 @@ export default function Playground() {
                         <button
                             onClick={handleAnalyze}
                             disabled={loading || !input}
-                            className="cta-button"
-                            style={{ width: '100%', marginTop: '16px', justifyContent: 'center' }}
+                            style={{
+                                width: '100%',
+                                marginTop: '16px',
+                                padding: '14px 24px',
+                                background: loading || !input ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #06B6D4, #0891B2)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: '15px',
+                                border: 'none',
+                                borderRadius: '12px',
+                                cursor: loading || !input ? 'not-allowed' : 'pointer',
+                                letterSpacing: '0.5px',
+                                transition: 'all 0.2s ease',
+                                boxShadow: loading || !input ? 'none' : '0 4px 20px rgba(6, 182, 212, 0.35)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px'
+                            }}
+                            onMouseEnter={e => {
+                                if (!loading && input) {
+                                    (e.target as HTMLElement).style.transform = 'translateY(-1px)';
+                                    (e.target as HTMLElement).style.boxShadow = '0 6px 25px rgba(6, 182, 212, 0.5)';
+                                }
+                            }}
+                            onMouseLeave={e => {
+                                (e.target as HTMLElement).style.transform = 'translateY(0)';
+                                (e.target as HTMLElement).style.boxShadow = loading || !input ? 'none' : '0 4px 20px rgba(6, 182, 212, 0.35)';
+                            }}
                         >
-                            {loading ? 'Analyzing...' : 'Simulate Redaction'}
+                            {loading ? '⏳ Analyzing...' : '⚡ Simulate Redaction'}
                         </button>
                     </div>
 

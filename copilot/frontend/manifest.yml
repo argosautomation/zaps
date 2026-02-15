@@ -28,6 +28,8 @@ image:
     dockerfile: frontend/Dockerfile
     args:
       NEXT_PUBLIC_API_URL: https://zaps.ai
+      NEXT_PUBLIC_STRIPE_PRICE_STARTER: price_1Sz0JDGhDW3wG5p3zxqu5MYH
+      NEXT_PUBLIC_STRIPE_PRICE_PRO: price_1Sz0EDGhDW3wG5p3k3zoXEYK
   # Port exposed through your container to route traffic to it.
   port: 3001
 

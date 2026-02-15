@@ -27,29 +27,6 @@ export default function BillingPage() {
             .finally(() => setLoading(false));
     }, []);
 
-    const handleCheckout = async (priceId: string) => {
-        setActionLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/billing/checkout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ priceID: priceId })
-            });
-            const data = await res.json();
-            if (data.url) window.location.href = data.url;
-            else alert('Failed to start checkout');
-        } catch (e) {
-            console.error(e);
-            alert('Error starting checkout');
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
     const handlePortal = async () => {
         setActionLoading(true);
         try {
@@ -79,19 +56,19 @@ export default function BillingPage() {
 
     // Infer plan from quota/tier
     let planName = 'Free Plan';
-    let isPro = false;
+    let isPaid = false;
 
     // Check explicit tier first, then fallback to quota
     if (stats?.subscription_tier === 'enterprise' || quota >= 1000000) {
         planName = 'Enterprise';
-        isPro = true;
-    } else if (stats?.subscription_tier === 'pro' || quota >= 50000) {
+        isPaid = true;
+    } else if (stats?.subscription_tier === 'pro' || quota >= 250000) {
         planName = 'Pro Plan';
-        isPro = true;
+        isPaid = true;
+    } else if (stats?.subscription_tier === 'starter' || quota >= 50000) {
+        planName = 'Starter Plan';
+        isPaid = true;
     }
-
-    // TODO: move to env
-    const PRO_PRICE_ID = 'price_1SyzAyK5nJVngABgxpWmk8Xy';
 
     return (
         <div className="space-y-8 max-w-4xl">
@@ -114,7 +91,7 @@ export default function BillingPage() {
                             </div>
                         </div>
 
-                        {isPro ? (
+                        {isPaid ? (
                             <button
                                 onClick={handlePortal}
                                 disabled={actionLoading}
@@ -124,13 +101,12 @@ export default function BillingPage() {
                                 <ExternalLink className="w-3 h-3" />
                             </button>
                         ) : (
-                            <button
-                                onClick={() => handleCheckout(PRO_PRICE_ID)}
-                                disabled={actionLoading}
+                            <Link
+                                href="/pricing"
                                 className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-cyan-900/20"
                             >
-                                {actionLoading ? 'Processing...' : 'Upgrade to Pro'}
-                            </button>
+                                View Plans
+                            </Link>
                         )}
                     </div>
 
@@ -141,7 +117,7 @@ export default function BillingPage() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-400">
                             <TrendingUp className="w-4 h-4 text-blue-500" />
-                            <span>Next billing date: {isPro ? 'Auto-renew' : 'N/A'}</span>
+                            <span>Next billing date: {isPaid ? 'Auto-renew' : 'N/A'}</span>
                         </div>
                     </div>
                 </div>
