@@ -18,8 +18,10 @@ var SecretPatterns = map[string]*regexp.Regexp{
 	"SSN":          regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`),
 	"CREDIT_CARD":  regexp.MustCompile(`\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b`),
 	"GITHUB_TOKEN": regexp.MustCompile(`ghp_[a-zA-Z0-9]{36,}`),
-	"STRIPE_KEY":   regexp.MustCompile(`sk_live_[a-zA-Z0-9]{24,}`),
+	"STRIPE_KEY":   regexp.MustCompile(`sk_(live|test)_[a-zA-Z0-9]{24,}`),
+	"GOOGLE_KEY":   regexp.MustCompile(`AIza[0-9A-Za-z\-_]{35}`),
 	"AWS_KEY":      regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
+	"UUID":         regexp.MustCompile(`\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b`),
 	"GENERIC_API":  regexp.MustCompile(`(?i)(api[\s_-]?key|secret[\s_-]?key|access[\s_-]?token)(?:\s+is)?[\s:=]+['"]?([^\s'"]{20,})['"]?`),
 }
 
