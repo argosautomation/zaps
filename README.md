@@ -22,6 +22,9 @@
     <a href="https://pkg.go.dev/github.com/argosautomation/zaps">
       <img src="https://img.shields.io/badge/Go-Reference-007d9c?style=for-the-badge&logo=go&logoColor=white" alt="Go Reference">
     </a>
+    <a href="https://moltis.org">
+      <img src="https://img.shields.io/badge/Works_with-Moltis-FF6600?style=for-the-badge&logoColor=white" alt="Works with Moltis">
+    </a>
   </p>
 </div>
 
@@ -30,6 +33,8 @@
 ## 🚀 Overview
 
 **Zaps** is an open-source, high-performance API gateway that sits between your applications and LLM providers (OpenAI, Anthropic, etc.). It automatically detects and redacts Personally Identifiable Information (PII) in real-time, ensuring your customer data never leaves your infrastructure in plain text.
+
+Zaps is the official privacy gateway for **[Moltis](https://moltis.org)**, the personal AI assistant built in Rust.
 
 > "Stop sending customer secrets to AI companies."
 
